@@ -1,27 +1,27 @@
-#include "Header/ServerSocket.h"
+#include "Header/Socket.h"
 
-ServerSocket::ServerSocket()
+Socket::Socket()
     : mSocketFd{-1}
 {
 }
 
-explicit ServerSocket::ServerSocket(int socketFd)
+explicit Socket::Socket(int socketFd)
     : mSocketFd{socketFd}
 {
 }
 
-ServerSocket::~ServerSocket()
+Socket::~Socket()
 {
     Close();
 }
 
-ServerSocket::ServerSocket(ServerSocket &&other) noexcept
+Socket::Socket(Socket &&other) noexcept
     : mSocketFd(other.mSocketFd)
 {
     other.mSocketFd = -1;
 }
 
-ServerSocket &ServerSocket::operator=(ServerSocket &&other) noexcept
+Socket &Socket::operator=(Socket &&other) noexcept
 {
     if (this != &other)
     {
@@ -33,16 +33,16 @@ ServerSocket &ServerSocket::operator=(ServerSocket &&other) noexcept
     return *this;
 }
 
-bool ServerSocket::IsOpen() const
+bool Socket::IsOpen() const
 {
     return mSocketFd >= 0;
 }
 
-eServerSocketError ServerSocket::Send(const void *data, std::size_t length, std::size_t &outSent)
+eSocketError Socket::Send(const void *data, std::size_t length, std::size_t &outSent)
 {
     outSent = 0;
     if (!IsOpen())
-        return ServerSocket_InvalidState;
+        return Socket_InvalidState;
 
     const char *bytes = static_cast<const char *>(data);
     std::size_t remain = length;
@@ -51,35 +51,35 @@ eServerSocketError ServerSocket::Send(const void *data, std::size_t length, std:
     {
         size_t sent = ::send(mSocketFd, bytes + outSent, remain, 0);
         if (sent <= 0)
-            return ServerSocket_SendFailed;
+            return Socket_SendFailed;
 
         remain -= static_cast<std::size_t>(sent);
         bytes += sent;
         outSent += static_cast<std::size_t>(sent);
     }
-    return ServerSocket_Ok;
+    return Socket_Ok;
 }
 
-eServerSocketError ServerSocket::Recv(void *buffer, std::size_t maxLength, std::size_t &outReceived)
+eSocketError Socket::Recv(void *buffer, std::size_t maxLength, std::size_t &outReceived)
 {
     outReceived = 0;
 
     if (!IsOpen())
     {
-        return ServerSocket_InvalidState;
+        return Socket_InvalidState;
     }
 
     ssize_t received = ::recv(mSocketFd, buffer, maxLength, 0);
     if (received < 0)
     {
-        return ServerSocket_RecvFailed;
+        return Socket_RecvFailed;
     }
 
     outReceived = static_cast<std::size_t>(received);
-    return ServerSocket_Ok;
+    return Socket_Ok;
 }
 
-void ServerSocket::Close()
+void Socket::Close()
 {
     if (mSocketFd >= 0)
     {

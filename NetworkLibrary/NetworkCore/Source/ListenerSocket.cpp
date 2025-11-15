@@ -63,7 +63,7 @@ eListenerSocketError ListenerSocket::Open()
 
     return ListenerSocket_Ok;
 }
-eListenerSocketError ListenerSocket::Accept(ServerSocket &outServerSocket)
+eListenerSocketError ListenerSocket::Accept(Socket &outServerSocket)
 {
     if (mListenSocket < 0)
         return ListenerSocket_InvalidState;
@@ -76,7 +76,7 @@ eListenerSocketError ListenerSocket::Accept(ServerSocket &outServerSocket)
         return ListenerSocket_AcceptFailed;
 
     outServerSocket.Close();
-    outServerSocket = ServerSocket(clientSocket);
+    outServerSocket = Socket(clientSocket);
 
     return ListenerSocket_Ok;
 }

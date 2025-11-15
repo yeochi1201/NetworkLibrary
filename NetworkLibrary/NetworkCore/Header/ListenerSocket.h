@@ -9,7 +9,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "ServerSocket.h"
+#include "Socket.h"
 
 typedef enum eListenerSocketError
 {
@@ -35,7 +35,7 @@ public:
 	ListenerSocket &operator=(ListenerSocket &&other) noexcept;
 
 	eListenerSocketError Open();
-	eListenerSocketError Accept(ServerSocket &outServerSocket);
+	eListenerSocketError Accept(Socket &outServerSocket);
 
 	bool IsOpen() const;
 
