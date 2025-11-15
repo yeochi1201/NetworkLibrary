@@ -78,3 +78,12 @@ eServerSocketError ServerSocket::Recv(void *buffer, std::size_t maxLength, std::
     outReceived = static_cast<std::size_t>(received);
     return ServerSocket_Ok;
 }
+
+void ServerSocket::Close()
+{
+    if (mSocketFd >= 0)
+    {
+        ::close(mSocketFd);
+        mSocketFd = -1;
+    }
+}
