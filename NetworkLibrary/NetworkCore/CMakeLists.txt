@@ -7,7 +7,7 @@ add_executable(MainApp
     "Main.cpp"
     "Main.h"
     "Header/Listener.h"
-)
+ "Source/Listener.cpp")
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET MainApp PROPERTY CXX_STANDARD 20)
