@@ -71,7 +71,7 @@ eListenerSocketError ListenerSocket::Accept(ServerSocket &outServerSocket)
     sockaddr_in clientAddress{};
     socklen_t clientAddressLen = static_cast<socklen_t>(sizeof(clientAddress));
 
-    int clientSocket = ::accept(mListenSocket, reinterpret_cast<sockaddr *>(&clientAddress), &clientLength);
+    int clientSocket = ::accept(mListenSocket, reinterpret_cast<sockaddr *>(&clientAddress), &clientAddressLen);
     if (clientSocket < 0)
         return ListenerSocket_AcceptFailed;
 
