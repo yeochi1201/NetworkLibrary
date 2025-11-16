@@ -11,7 +11,7 @@
 
 #include "Socket.h"
 
-typedef enum eListenerSocketError
+enum eListenerSocketError
 {
 	ListenerSocket_Ok = 0,
 	ListenerSocket_OpenFailed,

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libNetworkCore.a  CMakeFiles/NetworkCore.dir/Source/ListenerSocket.cpp.o CMakeFiles/NetworkCore.dir/Source/Socket.cpp.o
+/usr/bin/ranlib libNetworkCore.a
