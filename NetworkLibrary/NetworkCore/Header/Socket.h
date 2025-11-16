@@ -8,7 +8,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-typedef enum eSocketError
+enum eSocketError
 {
     Socket_Ok = 0,
     Socket_InvalidState,

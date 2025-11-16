@@ -1,6 +1,7 @@
-#include "Header/ListenerSocket.h"
+#include "ListenerSocket.h"
+#include <iostream>
 
-ListenerSocket::ListenerSocket(uint16_t port, int backlog = 5)
+ListenerSocket::ListenerSocket(uint16_t port, int backlog)
     : mListenSocket{-1}, mPort{port}, mBacklog{backlog}
 {
 }
@@ -35,31 +36,41 @@ eListenerSocketError ListenerSocket::Open()
 
     mListenSocket = ::socket(AF_INET, SOCK_STREAM, 0);
     if (mListenSocket < 0)
-        return ListenerSocket_OpenFailed;
-
-    int option = 1;
-    if (::setsockopt(mListenSocket, SOL_SOCKET, SO_REUSEADDR, &option, static_cast<socklen_t>(size_t(option))) < 0)
     {
-        Close();
-        return ListenerSocket_OptionFailed;
+        std::perror("[ListenerSocket::Open] socket creation failed");
+        return ListenerSocket_OpenFailed;
     }
+    std::printf("[ListenerSocket::Open] socket fd=%d\n", mListenSocket);
+
+    // int option = 1;
+    // socklen_t optLen = static_cast<socklen_t>(sizeof(option));
+    // if (::setsockopt(mListenSocket, SOL_SOCKET, SO_REUSEADDR, &option, optLen) < 0)
+    // {
+    //     Close();
+    //     std::perror("[ListenerSocket::Open] setsockopt SO_REUSEADDR failed");
+    //     return ListenerSocket_OptionFailed;
+    // }
 
     sockaddr_in address{};
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = ::htonl(INADDR_ANY);
-    address.sin_port = ::htonl(mPort);
+    address.sin_port = ::htons(mPort);
 
-    if (::bind(mListenSocket, reinterpret_cast<sockaddr *>(&address), static_cast<socklen_t>(sizeof(address))) > 0)
+    if (::bind(mListenSocket, reinterpret_cast<sockaddr *>(&address), static_cast<socklen_t>(sizeof(address))) < 0)
     {
         Close();
+        std::perror("[ListenerSocket::Open] bind failed");
         return ListenerSocket_BindFailed;
     }
+    std::printf("[ListenerSocket::Open] bound to port %u\n", static_cast<unsigned>(mPort));
 
     if (::listen(mListenSocket, mBacklog) < 0)
     {
         Close();
+        std::perror("[ListenerSocket::Open] listen failed");
         return ListenerSocket_ListenFailed;
     }
+    std::printf("[ListenerSocket::Open] listening with backlog %d\n", mBacklog);
 
     return ListenerSocket_Ok;
 }
@@ -73,11 +84,15 @@ eListenerSocketError ListenerSocket::Accept(Socket &outServerSocket)
 
     int clientSocket = ::accept(mListenSocket, reinterpret_cast<sockaddr *>(&clientAddress), &clientAddressLen);
     if (clientSocket < 0)
+    {
+        std::perror("[ListenerSocket::Accept] accept failed");
         return ListenerSocket_AcceptFailed;
+    }
 
     outServerSocket.Close();
     outServerSocket = Socket(clientSocket);
 
+    std::printf("[ListenerSocket::Open] listening on port %u\n", static_cast<unsigned>(mPort));
     return ListenerSocket_Ok;
 }
 
