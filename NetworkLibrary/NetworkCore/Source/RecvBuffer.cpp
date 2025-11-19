@@ -2,7 +2,7 @@
 
 
 RecvBuffer::RecvBuffer(size_t bufSize)
-    : mBufSize(bufSize), mBuf(std::make_unique<std::uint8_t[]>(mBufSize)), mIsFull(false), mIsOpen(false), mReadPos(0), mWritePos(0)
+    : mBufSize(bufSize), mIsFull(false), mIsOpen(false), mReadPos(0), mWritePos(0)
 {
 }
 
@@ -35,4 +35,38 @@ RecvBuffer& RecvBuffer::operator=(RecvBuffer&& other) noexcept
         other.mBufSize  = 0;
     }
     return *this;
+}
+
+eRecvBufferError RecvBuffer::Open()
+{
+    if(mIsOpen || mBufSize == 0)
+        return RecvBuf_InternalError;
+    mReadPos  = 0;
+    mWritePos = 0;
+    mIsFull   = false;
+    mIsOpen   = true;
+    mBuf = std::make_unique<std::uint8_t[]>(mBufSize);
+
+    return RecvBuf_Ok;
+}
+
+eRecvBufferError RecvBuffer::Reset()
+{
+    if(!mIsOpen)
+        return RecvBuf_NotOpen;
+    
+    mReadPos  = 0;
+    mWritePos = 0;
+    mIsFull   = false;
+
+    return RecvBuf_Ok;
+}
+
+void RecvBuffer::Close()
+{
+    mIsOpen = false;
+    mReadPos = 0;
+    mWritePos = 0;
+    mIsFull = false;
+    mBuf.reset();
 }
