@@ -11,9 +11,6 @@ enum eRecvBufferError{
     RecvBuf_InvalidArgs,
     RecvBuf_Overflow,
     RecvBuf_Underflow,
-    RecvBuf_WouldBlock,
-    RecvBuf_Disconnected,
-    RecvBuf_SocketError,
     RecvBuf_InternalError,
 };
 
@@ -34,7 +31,7 @@ public:
     eRecvBufferError Read(void* dst, size_t len, size_t& outRead);
     eRecvBufferError Peek(void* dst, size_t len, size_t& outPeek);
     eRecvBufferError Consume(size_t len);
-    eRecvBufferError Write(int sockFd, size_t& outRead);
+    eRecvBufferError Write(const void* src, size_t len, size_t& outWrite);
     
     size_t BufSize() const noexcept;
     size_t WriteSpace() const noexcept;
