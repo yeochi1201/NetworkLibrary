@@ -100,3 +100,18 @@ size_t RecvBuffer::FreeSpace() const noexcept
 
     return mBufSize - (WriteSpace());
 }
+
+bool RecvBuffer::IsOpen() const
+{
+    return mIsOpen;
+}
+
+bool RecvBuffer::IsEmpty() const
+{
+    return mIsOpen ? (!mIsFull && (mReadPos == mWritePos)) : true;
+}
+
+bool RecvBuffer::IsFull() const
+{
+    return mIsOpen && mIsFull;
+}
