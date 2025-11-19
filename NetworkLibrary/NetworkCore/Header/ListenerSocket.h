@@ -43,7 +43,7 @@ public:
 
 private:
 	int mListenSocket;
-	std::uint16_t mPort;
+	uint16_t mPort;
 	int mBacklog;
 };
 
