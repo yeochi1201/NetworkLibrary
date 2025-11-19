@@ -1,1 +1,0 @@
-/usr/bin/c++     CMakeFiles/ServerApp.dir/Source/Main.cpp.o  -o ServerApp  ../NetworkCore/libNetworkCore.a 
