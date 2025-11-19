@@ -70,3 +70,33 @@ void RecvBuffer::Close()
     mIsFull = false;
     mBuf.reset();
 }
+
+size_t RecvBuffer::BufSize() const noexcept
+{
+    return mBufSize;
+}
+size_t RecvBuffer::WriteSpace() const noexcept
+{
+    if(!mIsOpen)
+        return 0;
+
+    if(mIsFull)
+        return 0;
+
+    if(mWritePos >= mReadPos)
+        return mBufSize - (mWritePos - mReadPos);
+    else
+        return mReadPos - mWritePos;
+}
+
+
+size_t RecvBuffer::FreeSpace() const noexcept
+{
+    if(!mIsOpen)
+        return 0;
+
+    if(mIsFull)
+        return 0;
+
+    return mBufSize - (WriteSpace());
+}

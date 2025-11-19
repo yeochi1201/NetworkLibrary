@@ -39,7 +39,6 @@ public:
     size_t BufSize() const noexcept;
     size_t WriteSpace() const noexcept;
     size_t FreeSpace() const noexcept;
-    size_t BufSize() const noexcept;
 
     bool IsOpen() const;
     bool IsEmpty() const;
