@@ -3,8 +3,10 @@
 add_library(NetworkCore STATIC
     Source/ListenerSocket.cpp
     Source/Socket.cpp
+    Source/RecvBuffer.h
     Header/ListenerSocket.h
     Header/Socket.h
+    Header/RecvBuffer.h
 )
 
 target_include_directories(NetworkCore

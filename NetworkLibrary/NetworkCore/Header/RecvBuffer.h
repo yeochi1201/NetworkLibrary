@@ -1,53 +1,57 @@
-    #ifndef RECV_BUFFER_H
-    #define RECV_BUFFER_H
+#ifndef RECV_BUFFER_H
+#define RECV_BUFFER_H
 
-    enum eRecvBufferError{
-        RecvBuf_Ok = 0,
-        RecvBuf_NotOpen,
-        RecvBuf_InvalidArgs,
-        RecvBuf_Overflow,
-        RecvBuf_Underflow,
-        RecvBuf_WouldBlock,
-        RecvBuf_Disconnected,
-        RecvBuf_SocketError,
-        RecvBuf_InternalError,
-    }
+#include <sys/types.h>
+#include <memory>
+#include <cstdint>
 
-    class RecvBuffer{
-    public:
-        explicit RecvBuffer(size_t bufSize);
-        ~RecvBuffer();
+enum eRecvBufferError{
+    RecvBuf_Ok = 0,
+    RecvBuf_NotOpen,
+    RecvBuf_InvalidArgs,
+    RecvBuf_Overflow,
+    RecvBuf_Underflow,
+    RecvBuf_WouldBlock,
+    RecvBuf_Disconnected,
+    RecvBuf_SocketError,
+    RecvBuf_InternalError,
+};
 
-        RecvBuffer(const RecvBuffer&) = delete;
-        RecvBuffer& operator=(const RecvBuffer) = delete;
+class RecvBuffer{
+public:
+    explicit RecvBuffer(size_t bufSize);
+    ~RecvBuffer();
 
-        RecvBuffer(RecvBuffer&& other) noexcept;
-        RecvBuffer& operator=(RecvBuffer&& other) noexcept;
+    RecvBuffer(const RecvBuffer&) = delete;
+    RecvBuffer& operator=(const RecvBuffer) = delete;
 
-        eRecvBufferError Open();
-        eRecvBufferError Reset();
-        void Close();
-        eRecvBufferError Read(void* dst, size_t len, size_t& outRead);
-        eRecvBufferError Peek(void* dst, size_t len, size_t& outPeek);
-        eRecvBufferError Consume(size_t len);
-        eRecvBufferError Write();
-        
-        size_t BufSize() const noexcept;
-        size_t WriteSpace() const noexcept;
-        size_t FreeSpace() const noexcept;
-        size_t BufSize() const noexcept;
+    RecvBuffer(RecvBuffer&& other) noexcept;
+    RecvBuffer& operator=(RecvBuffer&& other) noexcept;
 
-        bool IsOpen() const;
-        bool IsEmpty() const;
-        bool IsFull() const;        
+    eRecvBufferError Open();
+    eRecvBufferError Reset();
+    void Close();
+    eRecvBufferError Read(void* dst, size_t len, size_t& outRead);
+    eRecvBufferError Peek(void* dst, size_t len, size_t& outPeek);
+    eRecvBufferError Consume(size_t len);
+    eRecvBufferError Write(int sockFd, size_t& outRead);
+    
+    size_t BufSize() const noexcept;
+    size_t WriteSpace() const noexcept;
+    size_t FreeSpace() const noexcept;
+    size_t BufSize() const noexcept;
 
-    private:
-        std::unique_ptr<std::uint8_t[]> mBuf;
-        bool mIsFull{false};
-        bool mIsOpen{false};
-        size_t mReadPos;
-        size_t mWritePos;
-        size_t mBufSize;
-    };
+    bool IsOpen() const;
+    bool IsEmpty() const;
+    bool IsFull() const;        
 
-    #endif
+private:
+    std::unique_ptr<std::uint8_t[]> mBuf;
+    bool mIsFull{false};
+    bool mIsOpen{false};
+    size_t mReadPos;
+    size_t mWritePos;
+    size_t mBufSize;
+};
+
+#endif
