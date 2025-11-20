@@ -131,7 +131,7 @@ eRecvBufferError RecvBuffer::Consume(size_t len)
     return RecvBuf_Ok;
 }
 
-eRecvBufferError RecvBuffer::Write(const void* src, size_t len, size_t& outWrite)
+eRecvBufferError RecvBuffer::Write(const void *src, size_t len, size_t &outWrite)
 {
     outWrite = 0;
 
