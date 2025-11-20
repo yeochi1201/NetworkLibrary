@@ -21,7 +21,7 @@ public:
     std::size_t Read(void* dst, size_t len);
     std::size_t Peek(void* dst, size_t len);
     void Consume(size_t len);
-    std::size_t Write(const void* src, size_t len, size_t& outWrite);
+    std::size_t Write(const void* src, size_t len);
     
     size_t BufSize() const noexcept;
     size_t DataSpace() const noexcept;

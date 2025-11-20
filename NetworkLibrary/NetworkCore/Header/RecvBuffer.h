@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <memory>
 #include <cstdint>
+#include "RingBuffer.h"
 
 enum eRecvBufferError{
     RecvBuf_Ok = 0,
@@ -42,12 +43,8 @@ public:
     bool IsFull() const;        
 
 private:
-    std::unique_ptr<std::uint8_t[]> mBuf;
-    bool mIsFull{false};
+    std::unique_ptr<RingBuffer> mRingBuffer;
     bool mIsOpen{false};
-    size_t mReadPos;
-    size_t mWritePos;
-    size_t mBufSize;
 };
 
 #endif

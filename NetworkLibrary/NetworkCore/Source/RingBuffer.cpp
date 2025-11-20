@@ -178,7 +178,7 @@ void RingBuffer::Consume(size_t len)
     mReadPos = (mReadPos + len) % mBufSize;
     mIsFull  = false;
 }
-std::size_t RingBuffer::Write(const void* src, size_t len, size_t& outWrite)
+std::size_t RingBuffer::Write(const void* src, size_t len)
 {
     if (!mBuf || !src || len == 0 || mBufSize == 0) {
         return 0;
