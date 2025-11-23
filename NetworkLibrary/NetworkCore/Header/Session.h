@@ -1,5 +1,6 @@
 #ifndef SESSION_H
 #define SESSION_H
+
 #include "Socket.h"
 #include "RecvBuffer.h"
 #include "SendBuffer.h"

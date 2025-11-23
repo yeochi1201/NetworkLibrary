@@ -49,3 +49,35 @@ Session& Session::operator=(Session&& other) noexcept
     }
     return *this;
 }
+
+eSessionError Session::Open(size_t recvBufSize, size_t sendBufSize)
+{
+    mState = SessionState_Opening;
+    
+    if(mState == SessionState_Open || mState == SessionState_Opening)
+        return Session_AlreadyOpen;
+    
+    mRecvBuffer = RecvBuffer(recvBufSize);
+    mSendBuffer = SendBuffer(sendBufSize);
+
+    eSendBufferError sErr = mSendBuffer.Open();
+    if(sErr != SendBuf_Ok){
+        mState = SessionState_Closed;
+        return Session_SendBufferError;
+    }
+    
+    eRecvBufferError rErr = mRecvBuffer.Open();
+    if(rErr != RecvBuf_Ok){
+        mState = SessionState_Closed;
+        return Session_RecvBufferError;
+    }
+        
+    if(!mSocket.IsOpen()){
+        mState = SessionState_Closed;
+        return  Session_SocketError;
+    }
+
+    mState = SessionState_Open;
+    mLastActive =  std::chrono::steady_clock::now();
+    return Session_Ok;
+}
