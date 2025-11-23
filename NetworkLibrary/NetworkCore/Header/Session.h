@@ -79,6 +79,8 @@ private:
     RecvCallback  mRecvCallback;
     SendCallback  mSendCallback;
     CloseCallback mCloseCallback;
+
+    std::chrono::steady_clock::time_point mLastActive;
 };
 
 #endif
