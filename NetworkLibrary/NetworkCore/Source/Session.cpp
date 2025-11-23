@@ -53,7 +53,7 @@ Session& Session::operator=(Session&& other) noexcept
 eSessionError Session::Open(size_t recvBufSize, size_t sendBufSize)
 {
     mState = SessionState_Opening;
-    
+
     if(mState == SessionState_Open || mState == SessionState_Opening)
         return Session_AlreadyOpen;
     
@@ -80,4 +80,20 @@ eSessionError Session::Open(size_t recvBufSize, size_t sendBufSize)
     mState = SessionState_Open;
     mLastActive =  std::chrono::steady_clock::now();
     return Session_Ok;
+}
+
+void Session::Close(){
+    if(mState == SessionState_Closed){
+        return;
+    }
+
+    mState = SessionState_Closing;
+
+    mSocket.Close();
+    mRecvBuffer.Close();
+    mSendBuffer.Close();
+
+    mState = SessionState_Closed;
+
+    InvokeCloseCallback();
 }
