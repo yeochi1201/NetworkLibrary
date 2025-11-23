@@ -37,6 +37,10 @@ bool Socket::IsOpen() const
 {
     return mSocketFd >= 0;
 }
+int Socket::GetFd() const
+{
+    return mSocketFd;
+}
 
 eSocketError Socket::Send(const void *data, std::size_t length, std::size_t &outSent)
 {

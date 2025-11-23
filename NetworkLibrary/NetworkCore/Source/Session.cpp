@@ -97,3 +97,11 @@ void Session::Close(){
 
     InvokeCloseCallback();
 }
+
+bool Session::IsOpen() const{
+    return mState == SessionState_Open && mSocket.IsOpen();
+}
+
+int Session::Fd() const{
+    return mSocket.GetFd();
+}
