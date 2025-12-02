@@ -11,6 +11,8 @@ add_library(NetworkCore STATIC
     Source/RingBuffer.cpp
     Header/SendBuffer.h
     Source/SendBuffer.cpp
+    Header/Session.h
+    Source/Session.cpp
 )
 
 target_include_directories(NetworkCore
