@@ -1,7 +1,7 @@
 #include "Session.h"
 
-Session::Session(size_t recvBufSize, size_t sendBufSize, int socketFd)
-    : mSocket(socketFd), mRecvBuffer(recvBufSize), mSendBuffer(sendBufSize), mState(SessionState_Closed), mLastActive(std::chrono::steady_clock::now())
+Session::Session(size_t recvBufSize, size_t sendBufSize, Socket &&socket)
+    : mSocket(std::move(socket)), mRecvBuffer(recvBufSize), mSendBuffer(sendBufSize), mState(SessionState_Closed), mLastActive(std::chrono::steady_clock::now())
 {
 }
 
@@ -42,20 +42,10 @@ Session &Session::operator=(Session &&other) noexcept
 
 eSessionError Session::Open(size_t recvBufSize, size_t sendBufSize)
 {
-    mState = SessionState_Opening;
-
     if (mState == SessionState_Open || mState == SessionState_Opening)
         return Session_AlreadyOpen;
 
-    mRecvBuffer = RecvBuffer(recvBufSize);
-    mSendBuffer = SendBuffer(sendBufSize);
-
-    eSendBufferError sErr = mSendBuffer.Open();
-    if (sErr != SendBuf_Ok)
-    {
-        mState = SessionState_Closed;
-        return Session_SendBufferError;
-    }
+    mState = SessionState_Opening;
 
     eRecvBufferError rErr = mRecvBuffer.Open();
     if (rErr != RecvBuf_Ok)
@@ -64,8 +54,18 @@ eSessionError Session::Open(size_t recvBufSize, size_t sendBufSize)
         return Session_RecvBufferError;
     }
 
+    eSendBufferError sErr = mSendBuffer.Open();
+    if (sErr != SendBuf_Ok)
+    {
+        mRecvBuffer.Close();
+        mState = SessionState_Closed;
+        return Session_SendBufferError;
+    }
+
     if (!mSocket.IsOpen())
     {
+        mRecvBuffer.Close();
+        mSendBuffer.Close();
         mState = SessionState_Closed;
         return Session_SocketError;
     }
@@ -110,11 +110,6 @@ eSessionError Session::PollRecv()
     eSocketError err = mSocket.Recv(tmpBuf, sizeof(tmpBuf), received);
     if (err != Socket_Ok)
     {
-        if (err == Socket_RecvFailed)
-        {
-            return Session_Ok;
-        }
-
         Close();
         return Session_SocketError;
     }
