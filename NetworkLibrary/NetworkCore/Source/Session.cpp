@@ -253,3 +253,26 @@ std::chrono::steady_clock::time_point &Session::LastActiveTime() noexcept
 {
     return mLastActive;
 }
+
+void Session::InvokeRecvCallback()
+{
+    if (mRecvCallback)
+    {
+        mRecvCallback(*this, mRecvBuffer);
+    }
+}
+void Session::InvokeSendCallback(size_t sentBytes)
+{
+    if (mSendCallback)
+    {
+        mSendCallback(*this, sentBytes);
+    }
+}
+
+void Session::InvokeCloseCallback()
+{
+    if (mCloseCallback)
+    {
+        mCloseCallback(*this);
+    }
+}
