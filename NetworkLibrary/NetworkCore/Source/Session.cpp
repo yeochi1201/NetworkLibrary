@@ -161,6 +161,7 @@ eSessionError Session::FlushSend()
     {
         size_t toSend = 0;
         eSendBufferError sbErr = mSendBuffer.Read(tmpBuf, sizeof(tmpBuf), toSend);
+
         if (sbErr != SendBuf_Ok || toSend == 0)
         {
             break;
