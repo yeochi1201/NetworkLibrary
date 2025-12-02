@@ -30,6 +30,7 @@ public:
     Socket &operator=(Socket &&other) noexcept;
 
     bool IsOpen() const;
+    int GetFd() const;
 
     eSocketError Send(const void *data, std::size_t length, std::size_t &outSent);
     eSocketError Recv(void *buffer, std::size_t maxLength, std::size_t &outReceived);
