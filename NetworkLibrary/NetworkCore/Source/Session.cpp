@@ -4,7 +4,6 @@ Session::Session(size_t recvBufSize, size_t sendBufSize, Socket &&socket)
     : mSocket(std::move(socket)), mRecvBuffer(recvBufSize), mSendBuffer(sendBufSize), mState(SessionState_Closed), mLastActive(std::chrono::steady_clock::now())
 {
 }
-
 Session::~Session()
 {
     Close();
@@ -18,7 +17,6 @@ Session::Session(Session &&other) noexcept
     other.mRecvCallback = nullptr;
     other.mCloseCallback = nullptr;
 }
-
 Session &Session::operator=(Session &&other) noexcept
 {
     if (this != &other)
@@ -74,7 +72,6 @@ eSessionError Session::Open(size_t recvBufSize, size_t sendBufSize)
     mLastActive = std::chrono::steady_clock::now();
     return Session_Ok;
 }
-
 void Session::Close()
 {
     if (mState == SessionState_Closed)
@@ -133,7 +130,6 @@ eSessionError Session::PollRecv()
 
     return Session_Ok;
 }
-
 eSessionError Session::FlushSend()
 {
     if (!IsOpen())
@@ -180,6 +176,22 @@ eSessionError Session::FlushSend()
     mLastActive = std::chrono::steady_clock::now();
     return Session_Ok;
 }
+eSessionError Session::QueueSend(const void *data, size_t len_)
+{
+}
+
+void Session::SetRecvCallback(RecvCallback callback)
+{
+    mRecvCallback = std::move(callback);
+}
+void Session::SetSendCallback(SendCallback callback)
+{
+    mSendCallback = std::move(callback);
+}
+void Session::SetCloseCallback(CloseCallback callback)
+{
+    mCloseCallback = std::move(callback);
+}
 
 int Session::Fd() const
 {
@@ -189,4 +201,25 @@ int Session::Fd() const
 eSessionState Session::State() const
 {
     return mState;
+}
+
+RecvBuffer &Session::RecvBuf() noexcept
+{
+    return mRecvBuffer;
+}
+const RecvBuffer &Session::RecvBuf() const noexcept
+{
+    return mRecvBuffer;
+}
+SendBuffer &Session::SendBuf() noexcept
+{
+    return mSendBuffer;
+}
+const SendBuffer &Session::SendBuf() const noexcept
+{
+    return mSendBuffer;
+}
+std::chrono::steady_clock::time_point &Session::LastActiveTime() noexcept
+{
+    return mLastActive;
 }
