@@ -176,8 +176,37 @@ eSessionError Session::FlushSend()
     mLastActive = std::chrono::steady_clock::now();
     return Session_Ok;
 }
-eSessionError Session::QueueSend(const void *data, size_t len_)
+eSessionError Session::QueueSend(const void *data, size_t len)
 {
+    if (!IsOpen())
+    {
+        return Session_NotOpen;
+    }
+
+    if (!mSendBuffer.IsOpen())
+    {
+        return Session_SendBufferError;
+    }
+
+    if (len == 0)
+    {
+        return Session_Ok;
+    }
+
+    if (data == nullptr)
+    {
+        return Session_InvalidArgs;
+    }
+
+    size_t written = 0;
+    eSendBufferError sbErr = mSendBuffer.Write(data, len, written);
+    if (sbErr != SendBuf_Ok || written != len)
+    {
+        return Session_SendBufferError;
+    }
+
+    mLastActive = std::chrono::steady_clock::now();
+    return Session_Ok;
 }
 
 void Session::SetRecvCallback(RecvCallback callback)
@@ -197,7 +226,6 @@ int Session::Fd() const
 {
     return mSocket.GetFd();
 }
-
 eSessionState Session::State() const
 {
     return mState;
@@ -211,6 +239,7 @@ const RecvBuffer &Session::RecvBuf() const noexcept
 {
     return mRecvBuffer;
 }
+
 SendBuffer &Session::SendBuf() noexcept
 {
     return mSendBuffer;
@@ -219,6 +248,7 @@ const SendBuffer &Session::SendBuf() const noexcept
 {
     return mSendBuffer;
 }
+
 std::chrono::steady_clock::time_point &Session::LastActiveTime() noexcept
 {
     return mLastActive;
