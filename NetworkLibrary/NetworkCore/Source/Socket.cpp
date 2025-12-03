@@ -57,12 +57,22 @@ eSocketError Socket::Send(const void *data, std::size_t length, std::size_t &out
 
     while (remain > 0)
     {
-        size_t sent = ::send(mSocketFd, bytes + outSent, remain, 0);
+        ssize_t sent = ::send(mSocketFd, bytes + outSent, remain, 0);
         if (sent <= 0)
+        {
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+            {
+                return Socket_WouldBlock;
+            }
             return Socket_SendFailed;
+        }
+        if (sent == 0)
+        {
+            return Socket_SendFailed;
+        }
 
-        remain -= static_cast<std::size_t>(sent);
         bytes += sent;
+        remain -= static_cast<std::size_t>(sent);
         outSent += static_cast<std::size_t>(sent);
     }
     return Socket_Ok;
