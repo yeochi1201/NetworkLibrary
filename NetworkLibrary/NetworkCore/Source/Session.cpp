@@ -365,7 +365,6 @@ void Session::InvokeSendCallback(size_t sentBytes)
         mSendCallback(*this, sentBytes);
     }
 }
-
 void Session::InvokeCloseCallback()
 {
     if (mCloseCallback)

@@ -41,6 +41,8 @@ public:
 
 	void Close();
 
+	int GetFd() const;
+
 private:
 	int mListenSocket;
 	uint16_t mPort;

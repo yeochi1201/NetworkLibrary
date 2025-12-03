@@ -1,5 +1,6 @@
 #include "ListenerSocket.h"
 #include <iostream>
+#include <fcntl.h>
 
 ListenerSocket::ListenerSocket(uint16_t port, int backlog)
     : mListenSocket{-1}, mPort{port}, mBacklog{backlog}
@@ -42,15 +43,11 @@ eListenerSocketError ListenerSocket::Open()
     }
     std::printf("[ListenerSocket::Open] socket fd=%d\n", mListenSocket);
 
-    // int option = 1;
-    // socklen_t optLen = static_cast<socklen_t>(sizeof(option));
-    // if (::setsockopt(mListenSocket, SOL_SOCKET, SO_REUSEADDR, &option, optLen) < 0)
-    // {
-    //     Close();
-    //     std::perror("[ListenerSocket::Open] setsockopt SO_REUSEADDR failed");
-    //     return ListenerSocket_OptionFailed;
-    // }
-
+    int flags = ::fcntl(mListenSocket, F_GETFL, 0);
+    if (falgs >= 0)
+    {
+        ::fcntl(mListenSocket, F_SETFL, flags | O_NONBLOCK);
+    }
     sockaddr_in address{};
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = ::htonl(INADDR_ANY);
@@ -108,4 +105,9 @@ void ListenerSocket::Close()
         ::close(mListenSocket);
         mListenSocket = -1;
     }
+}
+
+int ListenerSocket::GetFd() const
+{
+    return mListenSocket;
 }
