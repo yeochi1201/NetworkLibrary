@@ -90,6 +90,10 @@ eSocketError Socket::Recv(void *buffer, std::size_t maxLength, std::size_t &outR
     ssize_t received = ::recv(mSocketFd, buffer, maxLength, 0);
     if (received < 0)
     {
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+        {
+            return Socket_WouldBlock;
+        }
         return Socket_RecvFailed;
     }
 
