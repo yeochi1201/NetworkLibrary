@@ -44,7 +44,7 @@ eListenerSocketError ListenerSocket::Open()
     std::printf("[ListenerSocket::Open] socket fd=%d\n", mListenSocket);
 
     int flags = ::fcntl(mListenSocket, F_GETFL, 0);
-    if (falgs >= 0)
+    if (flags >= 0)
     {
         ::fcntl(mListenSocket, F_SETFL, flags | O_NONBLOCK);
     }

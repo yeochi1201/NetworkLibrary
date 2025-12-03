@@ -273,24 +273,23 @@ eSessionError Session::OnWritable()
         {
             break;
         }
-        size_t toSend = 0;
-        eSendBufferError sbErr = mSendBuffer.Read(tmpBuf, sizeof(tmpBuf), toSend);
+        size_t peeked = 0;
+        eSendBufferError sbErr = mSendBuffer.Peek(tmpBuf, sizeof(tmpBuf), peeked);
         if (sbErr != SendBuf_Ok)
         {
             return Session_SendBufferError;
         }
-        if (toSend == 0)
+        if (peeked == 0)
         {
             break;
         }
 
         size_t sent = 0;
-        eSocketError sErr = mSocket.Send(tmpBuf, toSend, sent);
+        eSocketError sErr = mSocket.Send(tmpBuf, peeked, sent);
         if (sErr == Socket_WouldBlock)
         {
-            // TODO Policy Setting for WouldBlock
-
-            return Session_Ok;
+            // send at next epollout
+            break;
         }
 
         if (sErr != Socket_Ok)
@@ -299,10 +298,19 @@ eSessionError Session::OnWritable()
             return Session_SocketError;
         }
 
-        InvokeSendCallback(sent);
-        mLastActive = std::chrono::steady_clock::now();
-    }
+        if (sent > 0)
+        {
+            eSendBufferError cErr = mSendBuffer.Consume(sent);
+            if (cErr != SendBuf_Ok)
+            {
+                Close();
+                return Session_SendBufferError;
+            }
 
+            InvokeSendCallback(sent);
+            mLastActive = std::chrono::steady_clock::now();
+        }
+    }
     return Session_Ok;
 }
 
