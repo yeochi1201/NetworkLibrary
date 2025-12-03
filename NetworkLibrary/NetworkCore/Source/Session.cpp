@@ -249,6 +249,62 @@ eSessionError Session::OnReadable()
     InvokeRecvCallback();
     return Session_Ok;
 }
+eSessionError Session::OnWritable()
+{
+    if (!IsOpen())
+    {
+        return Session_NotOpen;
+    }
+
+    if (!mSendBuffer.IsOpen())
+    {
+        return Session_SendBufferError;
+    }
+
+    if (mSendBuffer.IsEmpty())
+    {
+        return Session_Ok;
+    }
+
+    std::uint8_t tmpBuf[4096];
+    for (;;)
+    {
+        if (mSendBuffer.IsEmpty())
+        {
+            break;
+        }
+        size_t toSend = 0;
+        eSendBufferError sbErr = mSendBuffer.Read(tmpBuf, sizeof(tmpBuf), toSend);
+        if (sbErr != SendBuf_Ok)
+        {
+            return Session_SendBufferError;
+        }
+        if (toSend == 0)
+        {
+            break;
+        }
+
+        size_t sent = 0;
+        eSocketError sErr = mSocket.Send(tmpBuf, toSend, sent);
+        if (sErr == Socket_WouldBlock)
+        {
+            // TODO Policy Setting for WouldBlock
+
+            return Session_Ok;
+        }
+
+        if (sErr != Socket_Ok)
+        {
+            Close();
+            return Session_SocketError;
+        }
+
+        InvokeSendCallback(sent);
+        mLastActive = std::chrono::steady_clock::now();
+    }
+
+    return Session_Ok;
+}
 
 void Session::SetRecvCallback(RecvCallback callback)
 {
