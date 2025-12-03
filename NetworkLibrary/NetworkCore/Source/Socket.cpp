@@ -1,5 +1,9 @@
 #include "Socket.h"
 #include <iostream>
+#include <fcntl.h>
+#include <errno.h>
+#include <unistd.h>
+
 Socket::Socket()
     : mSocketFd{-1}
 {
@@ -80,6 +84,36 @@ eSocketError Socket::Recv(void *buffer, std::size_t maxLength, std::size_t &outR
     }
 
     outReceived = static_cast<std::size_t>(received);
+    return Socket_Ok;
+}
+
+eSocketError Socket::SetBlocking(bool blocking)
+{
+    if (!IsOpen())
+    {
+        return Socket_InvalidState;
+    }
+
+    int flags = ::fcntl(mSocketFd, F_GETFL, 0);
+    if (flags < 0)
+    {
+        return Socket_RecvFailed;
+    }
+
+    if (blocking)
+    {
+        flags &= ~O_NONBLOCK;
+    }
+    else
+    {
+        flags |= O_NONBLOCK;
+    }
+
+    if (::fcntl(mSocketFd, F_SETFL, flags) < 0)
+    {
+        return Socket_RecvFailed;
+    }
+
     return Socket_Ok;
 }
 
