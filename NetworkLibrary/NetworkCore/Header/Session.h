@@ -55,6 +55,9 @@ public:
     eSessionError FlushSend();
     eSessionError QueueSend(const void *data, size_t len);
 
+    eSessionError OnReadable();
+    eSessionError OnWritable();
+
     void SetRecvCallback(RecvCallback callback);
     void SetSendCallback(SendCallback callback);
     void SetCloseCallback(CloseCallback callback);

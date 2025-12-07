@@ -13,7 +13,10 @@ enum eSocketError
     Socket_Ok = 0,
     Socket_InvalidState,
     Socket_SendFailed,
-    Socket_RecvFailed
+    Socket_RecvFailed,
+    Socket_WouldBlock,
+    Socket_ConnectFailed,  
+    Socket_ConnectInProgress
 };
 
 class Socket
@@ -32,14 +35,16 @@ public:
     bool IsOpen() const;
     int GetFd() const;
 
+    eSocketError Connect(const char *ip, uint16_t port, bool nonBlocking);
     eSocketError Send(const void *data, std::size_t length, std::size_t &outSent);
     eSocketError Recv(void *buffer, std::size_t maxLength, std::size_t &outReceived);
+
+    eSocketError SetBlocking(bool blocking);
 
     void Close();
 
 private:
     int mSocketFd;
-
     friend class ListenerSocket;
 };
 

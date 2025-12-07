@@ -209,6 +209,111 @@ eSessionError Session::QueueSend(const void *data, size_t len)
     return Session_Ok;
 }
 
+eSessionError Session::OnReadable()
+{
+    if (!IsOpen())
+    {
+        return Session_NotOpen;
+    }
+
+    std::uint8_t tmpBuf[4096];
+    for (;;)
+    {
+        size_t received = 0;
+        eSocketError err = mSocket.Recv(tmpBuf, sizeof(tmpBuf), received);
+        if (err == Socket_WouldBlock)
+        {
+            break;
+        }
+        if (err != Socket_Ok)
+        {
+            Close();
+            return Session_SocketError;
+        }
+
+        if (received == 0)
+        {
+            Close();
+            return Session_PeerClosed;
+        }
+
+        size_t written = 0;
+        eRecvBufferError rbErr = mRecvBuffer.Write(tmpBuf, received, written);
+        if (rbErr != RecvBuf_Ok || written != received)
+        {
+            Close();
+            return Session_RecvBufferError;
+        }
+        mLastActive = std::chrono::steady_clock::now();
+    }
+    InvokeRecvCallback();
+    return Session_Ok;
+}
+eSessionError Session::OnWritable()
+{
+    if (!IsOpen())
+    {
+        return Session_NotOpen;
+    }
+
+    if (!mSendBuffer.IsOpen())
+    {
+        return Session_SendBufferError;
+    }
+
+    if (mSendBuffer.IsEmpty())
+    {
+        return Session_Ok;
+    }
+
+    std::uint8_t tmpBuf[4096];
+    for (;;)
+    {
+        if (mSendBuffer.IsEmpty())
+        {
+            break;
+        }
+        size_t peeked = 0;
+        eSendBufferError sbErr = mSendBuffer.Peek(tmpBuf, sizeof(tmpBuf), peeked);
+        if (sbErr != SendBuf_Ok)
+        {
+            return Session_SendBufferError;
+        }
+        if (peeked == 0)
+        {
+            break;
+        }
+
+        size_t sent = 0;
+        eSocketError sErr = mSocket.Send(tmpBuf, peeked, sent);
+        if (sErr == Socket_WouldBlock)
+        {
+            // send at next epollout
+            break;
+        }
+
+        if (sErr != Socket_Ok)
+        {
+            Close();
+            return Session_SocketError;
+        }
+
+        if (sent > 0)
+        {
+            eSendBufferError cErr = mSendBuffer.Consume(sent);
+            if (cErr != SendBuf_Ok)
+            {
+                Close();
+                return Session_SendBufferError;
+            }
+
+            InvokeSendCallback(sent);
+            mLastActive = std::chrono::steady_clock::now();
+        }
+    }
+    return Session_Ok;
+}
+
 void Session::SetRecvCallback(RecvCallback callback)
 {
     mRecvCallback = std::move(callback);
@@ -268,7 +373,6 @@ void Session::InvokeSendCallback(size_t sentBytes)
         mSendCallback(*this, sentBytes);
     }
 }
-
 void Session::InvokeCloseCallback()
 {
     if (mCloseCallback)
