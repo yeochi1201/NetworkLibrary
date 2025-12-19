@@ -1,4 +1,5 @@
 #include "Session.h"
+#include "MessageFramer.h"
 
 Session::Session(size_t recvBufSize, size_t sendBufSize, Socket &&socket)
     : mSocket(std::move(socket)), mRecvBuffer(recvBufSize), mSendBuffer(sendBufSize), mState(SessionState_Closed), mLastActive(std::chrono::steady_clock::now())
@@ -209,6 +210,14 @@ eSessionError Session::QueueSend(const void *data, size_t len)
     return Session_Ok;
 }
 
+eSessionError Session::SendFrame(const void* payload, std::size_t len){
+    std::vector<std::uint8_t> encoded;
+    const eFrameError fr = MessageFramer::Encode(payload, len, encoded);
+    if(fr != eFrameError::Framer_Ok)    return Session_InvalidArgs;
+
+    return QueueSend(encoded.data(), encoded.size());
+}
+
 eSessionError Session::OnReadable()
 {
     if (!IsOpen())
@@ -246,6 +255,27 @@ eSessionError Session::OnReadable()
         }
         mLastActive = std::chrono::steady_clock::now();
     }
+
+    if(mFrameCallback){
+        Frame f;
+        while(true){
+            const eFrameError r = MessageFramer::PopFrame(mRecvBuffer, f);
+
+            if(r == eFrameError::Framer_Ok){
+                InvokeFrameCallback(f.payload.data(), f.payload.size());
+                continue;
+            }
+
+            if(r == eFrameError::Framer_NeedMore)   break;
+
+            Close();
+            return Session_RecvBufferError;
+        }
+
+        return Session_Ok;
+    }
+
+
     InvokeRecvCallback();
     return Session_Ok;
 }
@@ -327,6 +357,10 @@ void Session::SetCloseCallback(CloseCallback callback)
     mCloseCallback = std::move(callback);
 }
 
+void Session::SetFrameCallback(FrameCallback callback){
+    mFrameCallback = std::move(callback);
+}
+
 int Session::Fd() const
 {
     return mSocket.GetFd();
@@ -378,5 +412,11 @@ void Session::InvokeCloseCallback()
     if (mCloseCallback)
     {
         mCloseCallback(*this);
+    }
+}
+
+void Session::InvokeFrameCallback(const std::uint8_t* payload, std::size_t len){
+    if(mFrameCallback){
+        mFrameCallback(*this, payload, len);
     }
 }
