@@ -173,5 +173,5 @@ eSessionError EpollClient::Send(const void* data, size_t len)
     if (!mSession || !mSession->IsOpen())
         return Session_NotOpen;
 
-    return mSession->QueueSend(data, len);
+    return mSession->SendFrame(data, len);
 }
