@@ -179,32 +179,17 @@ eSessionError Session::FlushSend()
 }
 eSessionError Session::QueueSend(const void *data, size_t len)
 {
-    if (!IsOpen())
-    {
-        return Session_NotOpen;
-    }
+    if (!IsOpen())              return Session_NotOpen;
+    if (!mSendBuffer.IsOpen())  return Session_SendBufferError;
+    if (len == 0)               return Session_Ok;
+    if (data == nullptr)        return Session_InvalidArgs;
 
-    if (!mSendBuffer.IsOpen())
-    {
-        return Session_SendBufferError;
-    }
-
-    if (len == 0)
-    {
-        return Session_Ok;
-    }
-
-    if (data == nullptr)
-    {
-        return Session_InvalidArgs;
-    }
+    const bool wasEmpty = mSendBuffer.IsEmpty();
 
     size_t written = 0;
     eSendBufferError sbErr = mSendBuffer.Write(data, len, written);
-    if (sbErr != SendBuf_Ok || written != len)
-    {
-        return Session_SendBufferError;
-    }
+    if (sbErr != SendBuf_Ok || written != len) return Session_SendBufferError;
+    if (wasEmpty) InvokeWriteInterest(true);
 
     mLastActive = std::chrono::steady_clock::now();
     return Session_Ok;
@@ -281,49 +266,23 @@ eSessionError Session::OnReadable()
 }
 eSessionError Session::OnWritable()
 {
-    if (!IsOpen())
-    {
-        return Session_NotOpen;
-    }
-
-    if (!mSendBuffer.IsOpen())
-    {
-        return Session_SendBufferError;
-    }
-
-    if (mSendBuffer.IsEmpty())
-    {
-        return Session_Ok;
-    }
+    if (!IsOpen())              return Session_NotOpen;
+    if (!mSendBuffer.IsOpen())  return Session_SendBufferError;
+    if (mSendBuffer.IsEmpty())  return Session_Ok;
 
     std::uint8_t tmpBuf[4096];
     for (;;)
     {
-        if (mSendBuffer.IsEmpty())
-        {
-            break;
-        }
+        if (mSendBuffer.IsEmpty())  break;
         size_t peeked = 0;
         eSendBufferError sbErr = mSendBuffer.Peek(tmpBuf, sizeof(tmpBuf), peeked);
-        if (sbErr != SendBuf_Ok)
-        {
-            return Session_SendBufferError;
-        }
-        if (peeked == 0)
-        {
-            break;
-        }
+        if (sbErr != SendBuf_Ok)    return Session_SendBufferError;
+        if (peeked == 0)            break;
 
         size_t sent = 0;
         eSocketError sErr = mSocket.Send(tmpBuf, peeked, sent);
-        if (sErr == Socket_WouldBlock)
-        {
-            // send at next epollout
-            break;
-        }
-
-        if (sErr != Socket_Ok)
-        {
+        if (sErr == Socket_WouldBlock)  break;
+        if (sErr != Socket_Ok) {
             Close();
             return Session_SocketError;
         }
@@ -341,6 +300,8 @@ eSessionError Session::OnWritable()
             mLastActive = std::chrono::steady_clock::now();
         }
     }
+
+    if(mSendBuffer.IsEmpty())   InvokeWriteInterest(false);
     return Session_Ok;
 }
 

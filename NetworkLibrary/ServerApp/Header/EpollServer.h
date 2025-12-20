@@ -14,6 +14,8 @@ public:
     bool Start();
     void Run();
     void Stop();
+
+    void UpdateWriteInterest(int fd, bool enable);
 private:
     void HandleNewConnection();
     void HandleClientEvent(int fd, uint32_t events);
