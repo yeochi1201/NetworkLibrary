@@ -35,6 +35,7 @@ public:
     using RecvCallback = std::function<void(Session &, RecvBuffer &)>;
     using SendCallback = std::function<void(Session &, size_t)>;
     using CloseCallback = std::function<void(Session &)>;
+    using FrameCallback = std::function<void(Session &, const std::uint8_t*, std::size_t)>;
 
 public:
     Session(size_t recvBufSize, size_t sendBufSize, Socket &&socket);
@@ -54,6 +55,7 @@ public:
     eSessionError PollRecv();
     eSessionError FlushSend();
     eSessionError QueueSend(const void *data, size_t len);
+    eSessionError SendFrame(const void *payload, std::size_t len);
 
     eSessionError OnReadable();
     eSessionError OnWritable();
@@ -61,6 +63,7 @@ public:
     void SetRecvCallback(RecvCallback callback);
     void SetSendCallback(SendCallback callback);
     void SetCloseCallback(CloseCallback callback);
+    void SetFrameCallback(FrameCallback callback);
 
     int Fd() const;
     eSessionState State() const;
@@ -77,6 +80,7 @@ private:
     void InvokeRecvCallback();
     void InvokeSendCallback(size_t sentBytes);
     void InvokeCloseCallback();
+    void InvokeFrameCallback(const std::uint8_t* payload, std::size_t len);
 
 private:
     Socket mSocket;
@@ -87,6 +91,7 @@ private:
     RecvCallback mRecvCallback;
     SendCallback mSendCallback;
     CloseCallback mCloseCallback;
+    FrameCallback mFrameCallback;
 
     std::chrono::steady_clock::time_point mLastActive;
 };

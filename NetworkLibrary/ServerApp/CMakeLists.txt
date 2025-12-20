@@ -2,6 +2,12 @@
 
 add_executable(ServerApp
     Source/Main.cpp
+    Source/EpollServer.cpp
+)
+
+target_include_directories(ServerApp
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/Header
 )
 
 target_link_libraries(ServerApp

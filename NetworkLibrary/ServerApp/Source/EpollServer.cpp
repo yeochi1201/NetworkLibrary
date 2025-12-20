@@ -91,7 +91,11 @@ void EpollServer::HandleNewConnection(){
             mSessions.erase(fd);
         });
 
-         epoll_event ev{};
+        session->SetFrameCallback([] (Session& s, const std::uint8_t* p, std::size_t n){
+            s.SendFrame(p, n);
+        });
+        
+        epoll_event ev{};
         ev.events = EPOLLIN | EPOLLOUT;
         ev.data.fd = fd;
 

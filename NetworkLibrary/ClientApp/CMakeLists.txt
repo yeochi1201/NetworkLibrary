@@ -2,6 +2,12 @@
 
 add_executable(ClientApp
     Source/Main.cpp
+    Source/EpollClient.cpp
+)
+
+target_include_directories(ClientApp
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/Header
 )
 
 target_link_libraries(ClientApp
