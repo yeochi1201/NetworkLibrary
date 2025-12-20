@@ -356,9 +356,11 @@ void Session::SetCloseCallback(CloseCallback callback)
 {
     mCloseCallback = std::move(callback);
 }
-
 void Session::SetFrameCallback(FrameCallback callback){
     mFrameCallback = std::move(callback);
+}
+void Session::SetWriteInterestCallback(WriteInterestCallback callback){
+    mWriteInterestCallback = std::move(callback);
 }
 
 int Session::Fd() const
@@ -368,6 +370,9 @@ int Session::Fd() const
 eSessionState Session::State() const
 {
     return mState;
+}
+bool Session::HasPendingSend() const noexcept{
+    return mSendBuffer.IsOpen() && !mSendBuffer.IsEmpty();
 }
 
 RecvBuffer &Session::RecvBuf() noexcept
@@ -418,5 +423,11 @@ void Session::InvokeCloseCallback()
 void Session::InvokeFrameCallback(const std::uint8_t* payload, std::size_t len){
     if(mFrameCallback){
         mFrameCallback(*this, payload, len);
+    }
+}
+
+void Session::InvokeWriteInterest(bool enable){
+    if(mWriteInterestCallback){
+        mWriteInterestCallback(*this, enable);
     }
 }
