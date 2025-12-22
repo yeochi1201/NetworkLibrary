@@ -36,7 +36,7 @@ public:
     using SendCallback = std::function<void(Session &, size_t)>;
     using CloseCallback = std::function<void(Session &)>;
     using FrameCallback = std::function<void(Session &, const std::uint8_t*, std::size_t)>;
-
+    using WriteInterestCallback = std::function<void(Session &, bool enable)>;
 public:
     Session(size_t recvBufSize, size_t sendBufSize, Socket &&socket);
     ~Session();
@@ -64,9 +64,11 @@ public:
     void SetSendCallback(SendCallback callback);
     void SetCloseCallback(CloseCallback callback);
     void SetFrameCallback(FrameCallback callback);
+    void SetWriteInterestCallback(WriteInterestCallback callback);
 
     int Fd() const;
     eSessionState State() const;
+    bool HasPendingSend() const noexcept;
 
     RecvBuffer &RecvBuf() noexcept;
     const RecvBuffer &RecvBuf() const noexcept;
@@ -81,6 +83,7 @@ private:
     void InvokeSendCallback(size_t sentBytes);
     void InvokeCloseCallback();
     void InvokeFrameCallback(const std::uint8_t* payload, std::size_t len);
+    void InvokeWriteInterest(bool enable);
 
 private:
     Socket mSocket;
@@ -92,6 +95,7 @@ private:
     SendCallback mSendCallback;
     CloseCallback mCloseCallback;
     FrameCallback mFrameCallback;
+    WriteInterestCallback mWriteInterestCallback;
 
     std::chrono::steady_clock::time_point mLastActive;
 };

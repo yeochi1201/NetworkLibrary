@@ -1,5 +1,6 @@
 #include "EpollServer.h"
 #include <fcntl.h>
+#include <sys/epoll.h>
 #include <unistd.h>
 #include <iostream>
 
@@ -44,6 +45,14 @@ bool EpollServer::Start(){
 
     mRunning = true;
     return true;   
+}
+void EpollServer::UpdateWriteInterest(int fd, bool enable){
+    epoll_event ev{};
+    ev.data.fd = fd;
+    ev.events = EPOLLIN | EPOLLERR | EPOLLHUP;
+    if(enable) ev.events |= EPOLLOUT;
+
+    ::epoll_ctl(mEpollFd, EPOLL_CTL_MOD, fd, &ev);
 }
 
 void EpollServer::HandleNewConnection(){
@@ -90,14 +99,17 @@ void EpollServer::HandleNewConnection(){
             ::epoll_ctl(mEpollFd, EPOLL_CTL_DEL, fd, nullptr);
             mSessions.erase(fd);
         });
-
         session->SetFrameCallback([] (Session& s, const std::uint8_t* p, std::size_t n){
             s.SendFrame(p, n);
         });
+        session->SetWriteInterestCallback([this](Session& s, bool enable){
+            this->UpdateWriteInterest(s.Fd(), enable);
+        });
+        
         
         epoll_event ev{};
-        ev.events = EPOLLIN | EPOLLOUT;
-        ev.data.fd = fd;
+        ev.events = EPOLLIN | EPOLLERR | EPOLLHUP;
+        ev.data.fd = session->Fd();
 
         if (::epoll_ctl(mEpollFd, EPOLL_CTL_ADD, fd, &ev) < 0)
         {
