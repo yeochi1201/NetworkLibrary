@@ -24,6 +24,8 @@ private:
     void HandleEvent(uint32_t events);
     bool CheckConnectCompleted(uint32_t events);
     uint32_t BuildClientEvent(bool connecting, bool sendOut);
+    void ScheduleReconnect();
+    void Reconnect();
 private:
     const char* mServerIp;
     uint16_t    mServerPort;
@@ -34,7 +36,9 @@ private:
     int mEpollFd;
     bool mConnecting = false;
     bool mWantSendOut = false;
-    bool mRunning;
+    bool mRunning = false;
+    bool mNeedReconnect = false;
 
+    std::chrono::steady_clock::time_point mNextReconnect;
     std::unique_ptr<Session> mSession;
 };

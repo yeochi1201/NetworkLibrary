@@ -2,6 +2,7 @@
 #include "EpollClient.h"
 
 #include <arpa/inet.h>
+#include <chrono>
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
@@ -116,7 +117,7 @@ void EpollClient::Run()
 
     while (mRunning)
     {
-        int n = ::epoll_wait(mEpollFd, events, kMaxEvents, -1);
+        int n = ::epoll_wait(mEpollFd, events, kMaxEvents, 1000);
         if (n < 0)
         {
             if (errno == EINTR) continue;
@@ -127,7 +128,12 @@ void EpollClient::Run()
         for (int i = 0; i < n; ++i)
         {
             HandleEvent(events[i].events);
-            if (!mRunning) break;
+        }
+
+        if(mNeedReconnect)
+        {
+            const auto now = std::chrono::steady_clock::now();
+            if(now >= mNextReconnect) Reconnect();
         }
     }
 }
@@ -167,7 +173,7 @@ void EpollClient::HandleEvent(uint32_t events)
     if (events & (EPOLLERR | EPOLLHUP))
     {
         mSession->Close();
-        mRunning = false;
+        ScheduleReconnect();
         return;
     }
 
@@ -184,7 +190,7 @@ void EpollClient::HandleEvent(uint32_t events)
             const eSessionError w = mSession->OnWritable();
             if (w == Session_SocketError || w == Session_SendBufferError)
             {
-                mRunning = false;
+                ScheduleReconnect();
                 return;
             }
             // OnWritable()에서 버퍼 empty 되면 Session이 disable 요청 -> MOD 발생
@@ -197,7 +203,7 @@ void EpollClient::HandleEvent(uint32_t events)
         const eSessionError r = mSession->OnReadable();
         if (r == Session_PeerClosed || r == Session_SocketError || r == Session_RecvBufferError)
         {
-            mRunning = false;
+            ScheduleReconnect();
             return;
         }
         // OnReadable() 중 응답으로 QueueSend() 호출되면 enable 요청 -> MOD 발생
@@ -246,4 +252,17 @@ bool EpollClient::CheckConnectCompleted(uint32_t /*events*/)
     }
 
     return true;
+}
+
+void EpollClient::ScheduleReconnect(){
+    mNeedReconnect = true;
+    mNextReconnect = std::chrono::steady_clock::now() + std::chrono::seconds(1);
+}
+
+void EpollClient::Reconnect(){
+    mNeedReconnect = false;
+    Stop();
+    if(!Start()){
+        ScheduleReconnect();
+    }
 }
