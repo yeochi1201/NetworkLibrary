@@ -1,5 +1,6 @@
 #include "Session.h"
 #include "MessageFramer.h"
+#include <chrono>
 
 Session::Session(size_t recvBufSize, size_t sendBufSize, Socket &&socket)
     : mSocket(std::move(socket)), mRecvBuffer(recvBufSize), mSendBuffer(sendBufSize), mState(SessionState_Closed), mLastActive(std::chrono::steady_clock::now())
@@ -357,6 +358,11 @@ const SendBuffer &Session::SendBuf() const noexcept
 std::chrono::steady_clock::time_point &Session::LastActiveTime() noexcept
 {
     return mLastActive;
+}
+
+bool Session::IsIdleTimeout(std::chrono::milliseconds timeout) const noexcept{
+    std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+    return (now - mLastActive) > timeout;
 }
 
 void Session::InvokeRecvCallback()

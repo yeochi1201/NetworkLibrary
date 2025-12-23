@@ -77,6 +77,7 @@ public:
     const SendBuffer &SendBuf() const noexcept;
 
     std::chrono::steady_clock::time_point &LastActiveTime() noexcept;
+    bool IsIdleTimeout(std::chrono::milliseconds timeout) const noexcept;
 
 private:
     void InvokeRecvCallback();
