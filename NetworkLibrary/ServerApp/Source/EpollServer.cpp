@@ -1,4 +1,5 @@
 #include "EpollServer.h"
+#include <chrono>
 #include <fcntl.h>
 #include <sys/epoll.h>
 #include <unistd.h>
@@ -158,9 +159,12 @@ void EpollServer::Run()
     constexpr int MAX_EVENTS = 64;
     epoll_event events[MAX_EVENTS];
 
+    constexpr auto kIdleTimeout = std::chrono::seconds(30);
+    constexpr int kTickMs = 1000;
+
     while (mRunning)
     {
-        int n = ::epoll_wait(mEpollFd, events, MAX_EVENTS, -1);
+        int n = ::epoll_wait(mEpollFd, events, MAX_EVENTS, kTickMs);
         if (n < 0)
         {
             if (errno == EINTR) continue;
@@ -181,6 +185,18 @@ void EpollServer::Run()
             {
                 HandleClientEvent(fd, ev);
             }
+        }
+
+        const auto now = std::chrono::steady_clock::now();
+        for(auto it = mSessions.begin(); it!=mSessions.end();){
+            Session& s = *(it->second);
+            if(s.IsIdleTimeout(std::chrono::duration_cast<std::chrono::milliseconds>(kIdleTimeout))){
+                auto victim = it++;
+                victim->second->Close();
+                continue;
+            }
+
+            it++;
         }
     }
 }

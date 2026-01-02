@@ -2,6 +2,7 @@
 #include "EpollClient.h"
 
 #include <arpa/inet.h>
+#include <chrono>
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
@@ -43,6 +44,12 @@ EpollClient::~EpollClient()
 
 bool EpollClient::Start()
 {
+    auto Fail = [this]() {
+    if (mEpollFd != -1) { ::close(mEpollFd); mEpollFd = -1; }
+    mSession.reset();
+    return false;
+    };
+
     if (mRunning) return true;
 
     // 1) epoll 생성
@@ -50,7 +57,7 @@ bool EpollClient::Start()
     if (mEpollFd < 0)
     {
         std::perror("epoll_create1");
-        return false;
+        return Fail();
     }
 
     // 2) non-blocking connect
@@ -67,7 +74,7 @@ bool EpollClient::Start()
     else
     {
         std::cerr << "connect failed\n";
-        return false;
+        return Fail();
     }
 
     // 3) Session 생성 & Open
@@ -76,11 +83,10 @@ bool EpollClient::Start()
     {
         std::cerr << "session open failed\n";
         mSession.reset();
-        return false;
+        return Fail();
     }
 
     // 4) Session -> EpollClient : send 목적 EPOLLOUT 토글 요청 콜백
-    //    CONNECTING 상태면 EPOLLOUT은 강제로 유지됨(아래 BuildClientEvents 로직)
     mSession->SetWriteInterestCallback([this](Session& /*s*/, bool enable) {
         mWantSendOut = enable;
 
@@ -103,7 +109,7 @@ bool EpollClient::Start()
     {
         std::perror("epoll_ctl ADD client");
         mSession.reset();
-        return false;
+        return Fail();
     }
 
     mRunning = true;
@@ -116,7 +122,7 @@ void EpollClient::Run()
 
     while (mRunning)
     {
-        int n = ::epoll_wait(mEpollFd, events, kMaxEvents, -1);
+        int n = ::epoll_wait(mEpollFd, events, kMaxEvents, 1000);
         if (n < 0)
         {
             if (errno == EINTR) continue;
@@ -127,7 +133,12 @@ void EpollClient::Run()
         for (int i = 0; i < n; ++i)
         {
             HandleEvent(events[i].events);
-            if (!mRunning) break;
+        }
+
+        if(mNeedReconnect)
+        {
+            const auto now = std::chrono::steady_clock::now();
+            if(now >= mNextReconnect) Reconnect();
         }
     }
 }
@@ -135,18 +146,7 @@ void EpollClient::Run()
 void EpollClient::Stop()
 {
     mRunning = false;
-
-    if (mSession)
-    {
-        const int fd = mSession->Fd();
-        if (mEpollFd >= 0)
-        {
-            ::epoll_ctl(mEpollFd, EPOLL_CTL_DEL, fd, nullptr);
-        }
-
-        mSession->Close();
-        mSession.reset();
-    }
+    CleanupSession();
 }
 
 eSessionError EpollClient::Send(const void* data, size_t len)
@@ -154,8 +154,6 @@ eSessionError EpollClient::Send(const void* data, size_t len)
     if (!mSession || !mSession->IsOpen())
         return Session_NotOpen;
 
-    // framing 사용 중이면 아래를 SendFrame으로 바꿔도 됨:
-    // return mSession->SendFrame(data, len);
     return mSession->QueueSend(data, len);
 }
 
@@ -167,7 +165,7 @@ void EpollClient::HandleEvent(uint32_t events)
     if (events & (EPOLLERR | EPOLLHUP))
     {
         mSession->Close();
-        mRunning = false;
+        ScheduleReconnect();
         return;
     }
 
@@ -176,7 +174,6 @@ void EpollClient::HandleEvent(uint32_t events)
     {
         if (mConnecting)
         {
-            // 완료면 내부에서 mConnecting=false + interest MOD까지 수행
             (void)CheckConnectCompleted(events);
         }
         else
@@ -184,10 +181,9 @@ void EpollClient::HandleEvent(uint32_t events)
             const eSessionError w = mSession->OnWritable();
             if (w == Session_SocketError || w == Session_SendBufferError)
             {
-                mRunning = false;
+                ScheduleReconnect();
                 return;
             }
-            // OnWritable()에서 버퍼 empty 되면 Session이 disable 요청 -> MOD 발생
         }
     }
 
@@ -197,10 +193,9 @@ void EpollClient::HandleEvent(uint32_t events)
         const eSessionError r = mSession->OnReadable();
         if (r == Session_PeerClosed || r == Session_SocketError || r == Session_RecvBufferError)
         {
-            mRunning = false;
+            ScheduleReconnect();
             return;
         }
-        // OnReadable() 중 응답으로 QueueSend() 호출되면 enable 요청 -> MOD 발생
     }
 }
 
@@ -228,11 +223,8 @@ bool EpollClient::CheckConnectCompleted(uint32_t /*events*/)
     }
 
     mConnecting = false;
-
-    // connect 직후 send buffer가 이미 차있으면 EPOLLOUT 필요
     mWantSendOut = mSession->HasPendingSend();
 
-    // CONNECTING 종료 후: wantSendOut에 따라 EPOLLOUT 제거 가능
     epoll_event ev{};
     ev.data.fd = mSession->Fd();
     ev.events  = BuildClientEvents(mConnecting, mWantSendOut);
@@ -246,4 +238,37 @@ bool EpollClient::CheckConnectCompleted(uint32_t /*events*/)
     }
 
     return true;
+}
+
+void EpollClient::ScheduleReconnect(){
+    mNeedReconnect = true;
+    mNextReconnect = std::chrono::steady_clock::now() + std::chrono::seconds(1);
+}
+
+void EpollClient::Reconnect(){
+    mNeedReconnect = false;
+    
+    CleanupSession();
+    if(mEpollFd != -1){
+        ::close(mEpollFd);
+        mEpollFd = -1;
+    }
+
+    const bool wasRunning = mRunning;
+    if(!Start()){
+        ScheduleReconnect();
+    }
+
+    mRunning = wasRunning;
+}
+
+void EpollClient::CleanupSession(){
+    if(mSession){
+        const int fd = mSession->Fd();
+        if(mEpollFd >= 0){
+            ::epoll_ctl(mEpollFd, EPOLL_CTL_DEL, fd, nullptr);
+        }
+        mSession->Close();
+        mSession.reset();
+    }
 }
