@@ -25,6 +25,7 @@ private:
     bool CheckConnectCompleted(uint32_t events);
     uint32_t BuildClientEvent(bool connecting, bool sendOut);
     void ScheduleReconnect();
+    void CleanupSession();
     void Reconnect();
 private:
     const char* mServerIp;
