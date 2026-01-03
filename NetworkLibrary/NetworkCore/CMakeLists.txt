@@ -13,6 +13,8 @@ add_library(NetworkCore STATIC
     Source/SendBuffer.cpp
     Header/Session.h
     Source/Session.cpp
+    Header/MessageFramer.h
+    Source/MessageFramer.cpp
 )
 
 target_include_directories(NetworkCore
