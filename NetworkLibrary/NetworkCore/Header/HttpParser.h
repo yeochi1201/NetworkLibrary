@@ -17,6 +17,14 @@ struct HttpRequest{
     std::string version;
     std::unordered_map<std::string, std::string> headers;
     std::vector<std::uint8_t> body;
+
+    void Clear(){
+        method.clear();
+        target.clear();
+        version.clear();
+        headers.clear();
+        body.clear();
+    }
 };
 
 
