@@ -1,4 +1,6 @@
 #include "Session.h"
+#include "MessageFramer.h"
+#include <chrono>
 
 Session::Session(size_t recvBufSize, size_t sendBufSize, Socket &&socket)
     : mSocket(std::move(socket)), mRecvBuffer(recvBufSize), mSendBuffer(sendBufSize), mState(SessionState_Closed), mLastActive(std::chrono::steady_clock::now())
@@ -178,35 +180,28 @@ eSessionError Session::FlushSend()
 }
 eSessionError Session::QueueSend(const void *data, size_t len)
 {
-    if (!IsOpen())
-    {
-        return Session_NotOpen;
-    }
+    if (!IsOpen())              return Session_NotOpen;
+    if (!mSendBuffer.IsOpen())  return Session_SendBufferError;
+    if (len == 0)               return Session_Ok;
+    if (data == nullptr)        return Session_InvalidArgs;
 
-    if (!mSendBuffer.IsOpen())
-    {
-        return Session_SendBufferError;
-    }
-
-    if (len == 0)
-    {
-        return Session_Ok;
-    }
-
-    if (data == nullptr)
-    {
-        return Session_InvalidArgs;
-    }
+    const bool wasEmpty = mSendBuffer.IsEmpty();
 
     size_t written = 0;
     eSendBufferError sbErr = mSendBuffer.Write(data, len, written);
-    if (sbErr != SendBuf_Ok || written != len)
-    {
-        return Session_SendBufferError;
-    }
+    if (sbErr != SendBuf_Ok || written != len) return Session_SendBufferError;
+    if (wasEmpty) InvokeWriteInterest(true);
 
     mLastActive = std::chrono::steady_clock::now();
     return Session_Ok;
+}
+
+eSessionError Session::SendFrame(const void* payload, std::size_t len){
+    std::vector<std::uint8_t> encoded;
+    const eFrameError fr = MessageFramer::Encode(payload, len, encoded);
+    if(fr != eFrameError::Framer_Ok)    return Session_InvalidArgs;
+
+    return QueueSend(encoded.data(), encoded.size());
 }
 
 eSessionError Session::OnReadable()
@@ -246,54 +241,49 @@ eSessionError Session::OnReadable()
         }
         mLastActive = std::chrono::steady_clock::now();
     }
+
+    if(mFrameCallback){
+        Frame f;
+        while(true){
+            const eFrameError r = MessageFramer::PopFrame(mRecvBuffer, f);
+
+            if(r == eFrameError::Framer_Ok){
+                InvokeFrameCallback(f.payload.data(), f.payload.size());
+                continue;
+            }
+
+            if(r == eFrameError::Framer_NeedMore)   break;
+
+            Close();
+            return Session_RecvBufferError;
+        }
+
+        return Session_Ok;
+    }
+
+
     InvokeRecvCallback();
     return Session_Ok;
 }
 eSessionError Session::OnWritable()
 {
-    if (!IsOpen())
-    {
-        return Session_NotOpen;
-    }
-
-    if (!mSendBuffer.IsOpen())
-    {
-        return Session_SendBufferError;
-    }
-
-    if (mSendBuffer.IsEmpty())
-    {
-        return Session_Ok;
-    }
+    if (!IsOpen())              return Session_NotOpen;
+    if (!mSendBuffer.IsOpen())  return Session_SendBufferError;
+    if (mSendBuffer.IsEmpty())  return Session_Ok;
 
     std::uint8_t tmpBuf[4096];
     for (;;)
     {
-        if (mSendBuffer.IsEmpty())
-        {
-            break;
-        }
+        if (mSendBuffer.IsEmpty())  break;
         size_t peeked = 0;
         eSendBufferError sbErr = mSendBuffer.Peek(tmpBuf, sizeof(tmpBuf), peeked);
-        if (sbErr != SendBuf_Ok)
-        {
-            return Session_SendBufferError;
-        }
-        if (peeked == 0)
-        {
-            break;
-        }
+        if (sbErr != SendBuf_Ok)    return Session_SendBufferError;
+        if (peeked == 0)            break;
 
         size_t sent = 0;
         eSocketError sErr = mSocket.Send(tmpBuf, peeked, sent);
-        if (sErr == Socket_WouldBlock)
-        {
-            // send at next epollout
-            break;
-        }
-
-        if (sErr != Socket_Ok)
-        {
+        if (sErr == Socket_WouldBlock)  break;
+        if (sErr != Socket_Ok) {
             Close();
             return Session_SocketError;
         }
@@ -311,6 +301,8 @@ eSessionError Session::OnWritable()
             mLastActive = std::chrono::steady_clock::now();
         }
     }
+
+    if(mSendBuffer.IsEmpty())   InvokeWriteInterest(false);
     return Session_Ok;
 }
 
@@ -326,6 +318,12 @@ void Session::SetCloseCallback(CloseCallback callback)
 {
     mCloseCallback = std::move(callback);
 }
+void Session::SetFrameCallback(FrameCallback callback){
+    mFrameCallback = std::move(callback);
+}
+void Session::SetWriteInterestCallback(WriteInterestCallback callback){
+    mWriteInterestCallback = std::move(callback);
+}
 
 int Session::Fd() const
 {
@@ -334,6 +332,9 @@ int Session::Fd() const
 eSessionState Session::State() const
 {
     return mState;
+}
+bool Session::HasPendingSend() const noexcept{
+    return mSendBuffer.IsOpen() && !mSendBuffer.IsEmpty();
 }
 
 RecvBuffer &Session::RecvBuf() noexcept
@@ -359,6 +360,11 @@ std::chrono::steady_clock::time_point &Session::LastActiveTime() noexcept
     return mLastActive;
 }
 
+bool Session::IsIdleTimeout(std::chrono::milliseconds timeout) const noexcept{
+    std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+    return (now - mLastActive) > timeout;
+}
+
 void Session::InvokeRecvCallback()
 {
     if (mRecvCallback)
@@ -378,5 +384,17 @@ void Session::InvokeCloseCallback()
     if (mCloseCallback)
     {
         mCloseCallback(*this);
+    }
+}
+
+void Session::InvokeFrameCallback(const std::uint8_t* payload, std::size_t len){
+    if(mFrameCallback){
+        mFrameCallback(*this, payload, len);
+    }
+}
+
+void Session::InvokeWriteInterest(bool enable){
+    if(mWriteInterestCallback){
+        mWriteInterestCallback(*this, enable);
     }
 }
