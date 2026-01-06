@@ -42,5 +42,10 @@ struct HttpResponse{
     std::string reason = "OK";
     std::unordered_map<std::string, std::string> headers;
     std::vector<std::uint8_t> body;
+
+    void SetTextBody(std::string_view s){
+        body.assign(s.begin(), s.end());
+        headers["Content-Type"] = "text/plain; charset=utf-8";
+    }
 };
 #endif
