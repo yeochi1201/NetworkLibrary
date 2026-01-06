@@ -37,5 +37,10 @@ struct HttpRequest{
     }
 };
 
-
+struct HttpResponse{
+    int status = 200;
+    std::string reason = "OK";
+    std::unordered_map<std::string, std::string> headers;
+    std::vector<std::uint8_t> body;
+};
 #endif
