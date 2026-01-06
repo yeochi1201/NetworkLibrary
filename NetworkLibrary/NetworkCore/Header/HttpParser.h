@@ -25,6 +25,16 @@ struct HttpRequest{
         headers.clear();
         body.clear();
     }
+
+    std::optional<std::string_view> Header(std::string_view key) const{
+        std:: string k(key);
+        for(auto&c : k) c = (char)std::tolower((unsigned char)c);
+
+        auto it = headers.find(k);
+        if (it == headers.end()) return std::nullopt;
+
+        return std::string_view(it->second);
+    }
 };
 
 
