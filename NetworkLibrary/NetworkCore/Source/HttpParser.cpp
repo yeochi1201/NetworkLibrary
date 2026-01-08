@@ -12,3 +12,10 @@ void HttpParser::Reset(){
     mCur.Clear();
     mContentLength = 0;
 }
+
+std::string HttpParser::ToLower(std::string_view s){
+    std::string out;
+    out.reserve(s.size());
+
+    for(char c : s) out.push_back((char)std::tolower((unsigned char)c));
+}
