@@ -1,6 +1,7 @@
 #include "HttpParser.h"
 #include "RecvBuffer.h"
 #include <cctype>
+#include <cstddef>
 #include <cstring>
 #include <cstdlib>
 
@@ -103,5 +104,70 @@ bool HttpParser::ParseHeaderLine(const std::string& line, std::string* err){
     
     if(k.empty()){
         if(err) *err = "Bad Header Key"; return false;
+    }
+
+    mCur.headers[k] = v;
+    return true;
+}
+
+HttpParser::Result HttpParser::TryParse(RecvBuffer& rb, HttpRequest& rq, std::string* outErr){
+    //Pulling
+    if(rb.WriteSpace() > 0) (void)PullFromRecvBuffer(rb);
+
+    while(true){
+        if(mState == State::Http_RequestLine){
+            std::string line;
+            if(!PopLine(line)) return Result::Http_NeedMore;
+            if(line.empty()) return Result::Http_NeedMore;
+            if(!ParseRequestLine(line, outErr)) return Result::Http_Error;
+
+            mState = State::Http_Headers;
+            continue;
+        }
+
+        if(mState == State::Http_Headers){
+            std::string line;
+            if(!PopLine(line)) return Result::Http_NeedMore;
+            if(line.empty()){
+                mContentLength = 0;
+                auto it = mCur.headers.find("content-length");
+                if(it != mCur.headers.end()){
+                    char* end = nullptr;
+                    long v = std::strtol(it->second.c_str(), &end, 10);
+                    if(end == it->second.c_str() || v < 0){
+                        if(outErr) *outErr = "Invalid Content-Length";
+                        return Result::Http_Error;
+                    }
+                    mContentLength = (std::size_t)v;
+                }
+
+                if(mContentLength == 0){
+                    rq = std::move(mCur);
+                    mCur.Clear();
+                    mState = State::Http_RequestLine;
+                    return Result::Http_Ok;
+                }
+
+                mState = State::Http_Body;
+                continue;
+            }
+        }
+
+        if(mState == State::Http_Body){
+            if(mBuf.size() < mContentLength){
+                if(rb.WriteSpace() > 0){
+                    if(PullFromRecvBuffer(rb)) continue;
+                }
+                return Result::Http_NeedMore;
+            }
+
+            mCur.body.assign(mBuf.begin(), mBuf.begin()+ (std::ptrdiff_t)mContentLength);
+            mBuf.erase(0, mContentLength);
+
+            rq = std::move(mCur);
+            mCur.Clear();
+            mContentLength = 0;
+            return Result::Http_Ok;
+        }
     }
 }
