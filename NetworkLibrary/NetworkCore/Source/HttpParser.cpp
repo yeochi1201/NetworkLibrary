@@ -70,3 +70,24 @@ bool HttpParser::PopLine(std::string& outLine){
     return true;
 }
 
+bool HttpParser::ParseRequestLine(const std::string& line, std::string* err){
+    std::size_t p1 = line.find(' ');
+    if(p1 == std::string::npos) {if(err) *err = "Bad Request Line"; return false;}
+
+    std::size_t p2 = line.find(' ', p1+1);
+    if(p2 == std::string::npos) {if(err) *err = "Bad Request Line"; return false;}
+
+    mCur.method = line.substr(0, p1);
+    mCur.target = line.substr(p1+1, p2-(p1+1));
+    mCur.version = line.substr(p2+1);
+
+    if(mCur.method.empty() || mCur.target.empty() || mCur.version.empty()){
+        if(err) *err = "Bad Request Line"; return false;
+    }
+
+    if(mCur.version != "HTTP/1.1" && mCur.version != "HTTP/1.0"){
+        if(err) *err = "Unsupported HTTP version"; return false;
+    }
+
+    return true;
+}
