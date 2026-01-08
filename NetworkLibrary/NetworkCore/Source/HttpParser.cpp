@@ -167,7 +167,39 @@ HttpParser::Result HttpParser::TryParse(RecvBuffer& rb, HttpRequest& rq, std::st
             rq = std::move(mCur);
             mCur.Clear();
             mContentLength = 0;
+            mState = State::Http_RequestLine;
             return Result::Http_Ok;
         }
     }
+}
+
+std::vector<std::uint8_t> BuildHttpResponseBytes(const HttpResponse &resp, bool keepAlive){
+    std::string header;
+    header.reserve(256);
+
+    header += "HTTP/1.1 ";
+    header += std::to_string(resp.status);
+    header += " ";
+    header += resp.reason;
+    header += "\r\n";
+
+    std::size_t contentLen = resp.body.size();
+    header += "Content-Length: " + std::to_string(contentLen) + "\r\n";
+
+    header += std::string("Connection: ") + (keepAlive ? "keep-alive" : "close") + "\r\n";
+
+    for(const auto& [k, v] : resp.headers){
+        header += k;
+        header += ": ";
+        header += v;
+        header += "\r\n";
+    }
+
+    header += "\r\n";
+
+    std::vector<std::uint8_t> out;
+    out.reserve(header.size() + resp.body.size());
+    out.insert(out.end(), header.begin(), header.end());
+    out.insert(out.end(), resp.body.begin(), resp.body.end());
+    return out;
 }
