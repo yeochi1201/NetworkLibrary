@@ -91,3 +91,17 @@ bool HttpParser::ParseRequestLine(const std::string& line, std::string* err){
 
     return true;
 }
+
+bool HttpParser::ParseHeaderLine(const std::string& line, std::string* err){
+    std::string_view left, right;
+    if(!SplitOnce(line, ':', left, right)){
+        if(err) *err = "Bad Header Line"; return false;
+    }
+
+    auto k = ToLower(Trim(left));
+    auto v = Trim(right);
+    
+    if(k.empty()){
+        if(err) *err = "Bad Header Key"; return false;
+    }
+}

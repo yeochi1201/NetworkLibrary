@@ -75,6 +75,6 @@ private:
     bool PullFromRecvBuffer(RecvBuffer& rb, std::size_t maxPull = 64 * 1024);
     bool PopLine(std::string& outLine);
     bool ParseRequestLine(const std::string& line, std::string* err);
-    bool PraseHeaderLine(const std::string& line, std::string* err);
+    bool ParseHeaderLine(const std::string& line, std::string* err);
 };
 #endif
