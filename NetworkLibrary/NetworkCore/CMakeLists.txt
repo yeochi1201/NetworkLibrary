@@ -15,6 +15,8 @@ add_library(NetworkCore STATIC
     Source/Session.cpp
     Header/MessageFramer.h
     Source/MessageFramer.cpp
+    Header/HttpParser.h
+    Source/HttpParser.cpp
 )
 
 target_include_directories(NetworkCore
