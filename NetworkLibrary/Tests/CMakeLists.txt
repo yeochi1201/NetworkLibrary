@@ -15,6 +15,7 @@ add_executable(NetworkCoreTests
     Test_MessageFramer.cpp
     Test_RingBuffer.cpp
     Test_SendBuffer.cpp
+    Test_HttpParser.cpp
 )
 
 target_link_libraries(NetworkCoreTests
