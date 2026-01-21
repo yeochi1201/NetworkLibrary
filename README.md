@@ -34,7 +34,6 @@ TCP 스트림 환경에서도 안정적으로 동작하는 **HTTP/1.1 서버**�
 
 ## 🚀 Server Execution
 
-![server-run](images/server_run.png)
 
 epoll 기반 서버가 정상적으로 기동되며,
 HTTP 요청을 수신할 준비가 된 상태입니다.
@@ -43,7 +42,6 @@ HTTP 요청을 수신할 준비가 된 상태입니다.
 
 ## ✅ Health Check Endpoint
 
-![health](images/health.png)
 
 ```bash
 curl -v http://127.0.0.1:8080/health
@@ -116,19 +114,19 @@ client accept 대기 상태
 서버 실행 후 다른 터미널에서 다음 명령으로 동작을 확인할 수 있다.
 
 Health Check
-![health](images/health.png)
+![health](Image/health.png)
 ```bash
 curl -v http://127.0.0.1:8080/health
 ```
 
 Echo (POST)
-![echo](images/echo.png)
+![echo](Image/echo.png)
 ```bash
 curl -v -X POST http://127.0.0.1:8080/echo -d "hello"
 ```
 
 Keep-Alive Test'
-![keep-alive](images/keep-alive.png)
+![keep-alive](Image/keep-alive.png)
 ```bash
 curl -v --http1.1 \
   http://127.0.0.1:8080/health \
