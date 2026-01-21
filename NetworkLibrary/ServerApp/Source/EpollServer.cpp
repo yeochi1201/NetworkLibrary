@@ -99,6 +99,9 @@ void EpollServer::HandleNewConnection() {
         HttpRequest req;
         std::string perr;
 
+        std::cout << "[HTTP] recv callback fd=" << s.Fd() << "\n";
+
+
         HttpParser::Result r = st.parser.TryParse(rb, req, &perr);
 
         if (r == HttpParser::Result::Http_NeedMore)
@@ -187,9 +190,11 @@ void EpollServer::HandleNewConnection() {
     // Common TCP/IP Server
     // session->SetFrameCallback([](Session &s, const std::uint8_t *p,
     //                              std::size_t n) { s.SendFrame(p, n); });
-    // session->SetWriteInterestCallback([this](Session &s, bool enable) {
-    //   this->UpdateWriteInterest(s.Fd(), enable);
-    // });
+    session->SetWriteInterestCallback([this](Session &s, bool enable) {
+       this->UpdateWriteInterest(s.Fd(), enable);
+       std::cout << "[HTTP] write interest " << (enable ? "ON" : "OFF")
+          << " fd=" << s.Fd() << "\n";
+    });
 
     epoll_event ev{};
     ev.events = EPOLLIN | EPOLLERR | EPOLLHUP;

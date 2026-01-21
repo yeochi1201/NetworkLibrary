@@ -2,7 +2,7 @@
 
 int main()
 {
-    EpollServer server(3000, 64 * 1024, 64 * 1024); // recv/send buf size 예시
+    EpollServer server(8080, 64 * 1024, 64 * 1024); // recv/send buf size 예시
 
     if (!server.Start())
         return 1;

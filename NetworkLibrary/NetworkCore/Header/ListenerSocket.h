@@ -20,6 +20,7 @@ enum eListenerSocketError
 	ListenerSocket_ListenFailed,
 	ListenerSocket_AcceptFailed,
 	ListenerSocket_InvalidState,
+	ListenerSocket_WouldBlock
 };
 
 class ListenerSocket

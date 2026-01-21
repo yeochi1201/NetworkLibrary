@@ -82,6 +82,9 @@ eListenerSocketError ListenerSocket::Accept(Socket &outServerSocket)
     int clientSocket = ::accept(mListenSocket, reinterpret_cast<sockaddr *>(&clientAddress), &clientAddressLen);
     if (clientSocket < 0)
     {
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+            return ListenerSocket_WouldBlock;
+        
         std::perror("[ListenerSocket::Accept] accept failed");
         return ListenerSocket_AcceptFailed;
     }
