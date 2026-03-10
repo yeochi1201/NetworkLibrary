@@ -7,7 +7,9 @@
 #include <unordered_map>
 #include <vector>
 
+class HttpParser;
 class HttpResponse{
+    friend class HttpParser;
 public:
     void Clear();
 
