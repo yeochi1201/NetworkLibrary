@@ -21,6 +21,7 @@ public:
     void SetHeader(std::string key, std::string value);
     bool HasHeader(std::string_view key) const;
 
+    std::vector<std::uint8_t> Serialize(bool keepAlive) const;
 private:
     int status = 200;
     std::string reason = "OK";
