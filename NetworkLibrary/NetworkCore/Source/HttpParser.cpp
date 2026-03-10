@@ -108,14 +108,15 @@ bool HttpParser::ParseHeaderLine(const std::string& line, std::string* err){
         if(err) *err = "Bad Header Line"; return false;
     }
 
-    auto k = ToLower(Trim(left));
-    auto v = Trim(right);
-    
-    if(k.empty()){
-        if(err) *err = "Bad Header Key"; return false;
+    auto key = NormalizeHeaderKey(Trim(left));
+    auto value = Trim(right);
+
+    if(key.empty()){
+        if(err) *err = "Bad Header Key";
+        return false;
     }
 
-    mCur.headers[k] = v;
+    mCur.headers[key] = value;
     return true;
 }
 
@@ -146,7 +147,7 @@ HttpParser::Result HttpParser::TryParse(RecvBuffer& rb, HttpRequest& rq, std::st
         if(mState == State::Http_RequestLine){
             std::string line;
             if(!PopLine(line)) return Result::Http_NeedMore;
-            if(line.empty()) return Result::Http_NeedMore;
+            if(line.empty()) continue;
             if(!ParseRequestLine(line, outErr)) return Result::Http_Error;
 
             mState = State::Http_Headers;
@@ -165,12 +166,12 @@ HttpParser::Result HttpParser::TryParse(RecvBuffer& rb, HttpRequest& rq, std::st
                     char* end = nullptr;
                     long v = std::strtol(it->second.c_str(), &end, 10);
 
-                    if(end == it->second.c_str() || v < 0){
+                    if(end == it->second.c_str() || *end != '\0' || v < 0){
                         if(outErr) *outErr = "Invalid Content-Length";
                         return Result::Http_Error;
                     }
 
-                    mContentLength = (std::size_t)v;
+                    mContentLength = static_cast<std::size_t>(v);
                 }
 
                 auto connIt = mCur.headers.find("connection");

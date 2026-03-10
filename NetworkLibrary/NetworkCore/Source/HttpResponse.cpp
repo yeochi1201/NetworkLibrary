@@ -4,16 +4,6 @@
 #include <cctype>
 #include <utility>
 
-std::string NormalizeHeaderKey(std::string_view key){
-    std::string out;
-    out.reserve(key.size());
-
-    for(char c : key){
-        out.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
-    }
-
-    return out;
-}
 
 void HttpResponse::Clear(){
     status = 200;
@@ -66,14 +56,14 @@ std::vector<std::uint8_t> HttpResponse::Serialize(bool keepAlive) const{
 
     if (!HasHeader("content-length"))
     {
-        header += "Content-Length: ";
+        header += "content-Length: ";
         header += std::to_string(body.size());
         header += "\r\n";
     }
 
     if (!HasHeader("connection"))
     {
-        header += "Connection: ";
+        header += "connection: ";
         header += (keepAlive ? "keep-alive" : "close");
         header += "\r\n";
     }
