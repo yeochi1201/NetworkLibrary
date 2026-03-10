@@ -22,6 +22,10 @@ public:
     void SetHeader(std::string key, std::string value);
     bool HasHeader(std::string_view key) const;
 
+    const std::vector<std::uint8_t>& Body() const;
+    std::size_t BodySize() const;
+    bool EmptyBody() const;
+
     std::vector<std::uint8_t> Serialize(bool keepAlive) const;
 private:
     int status = 200;

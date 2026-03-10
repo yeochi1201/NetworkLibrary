@@ -44,6 +44,21 @@ bool HttpResponse::HasHeader(std::string_view key) const
     return ::HasHeader(headers, key);
 }
 
+const std::vector<std::uint8_t>& HttpResponse::Body() const
+{
+    return body;
+}
+
+std::size_t HttpResponse::BodySize() const
+{
+    return body.size();
+}
+
+bool HttpResponse::EmptyBody() const
+{
+    return body.empty();
+}
+
 std::vector<std::uint8_t> HttpResponse::Serialize(bool keepAlive) const{
     std::string header;
     header.reserve(256);

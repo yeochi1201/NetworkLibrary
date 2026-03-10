@@ -19,7 +19,11 @@ public:
 
     std::optional<std::string_view> Header(std::string_view key) const;
     bool HasHeader(std::string_view) const;
+    
     std::string_view BodyText() const;
+    const std::vector<std::uint8_t>& Body() const;
+    std::size_t BodySize() const;
+    bool EmptyBody() const;
 private:
     HttpMethod method = HttpMethod::Unknown;
     std::string methodText;
