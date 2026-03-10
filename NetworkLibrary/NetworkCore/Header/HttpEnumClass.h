@@ -6,7 +6,7 @@ enum class HttpMethod{
     Patch,
     Head,
     Options,
-    Unknowns
+    Unknown
 };
 
 enum class HttpVersion{
