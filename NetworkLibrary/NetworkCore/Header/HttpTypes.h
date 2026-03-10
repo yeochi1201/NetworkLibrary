@@ -21,6 +21,17 @@ enum class HttpVersion{
     Unknown
 };
 
+enum class HttpHeader{
+    Host,
+    ContentLength,
+    Connection,
+    ContentType,
+    UserAgent,
+    Accept,
+    Authorization,
+    Unknown
+};
+
 using HeaderMap = std::unordered_map<std::string, std::string>;
 using QueryMap = std::unordered_map<std::string, std::string>;
 
