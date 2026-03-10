@@ -78,15 +78,22 @@ bool HttpParser::ParseRequestLine(const std::string& line, std::string* err){
     std::size_t p2 = line.find(' ', p1+1);
     if(p2 == std::string::npos) {if(err) *err = "Bad Request Line"; return false;}
 
-    mCur.method = line.substr(0, p1);
+    mCur.methodText = line.substr(0, p1);
     mCur.target = line.substr(p1+1, p2-(p1+1));
-    mCur.version = line.substr(p2+1);
-
-    if(mCur.method.empty() || mCur.target.empty() || mCur.version.empty()){
+    mCur.versionText = line.substr(p2+1);
+   
+    if(mCur.methodText.empty() || mCur.target.empty() || mCur.versionText.empty()){
         if(err) *err = "Bad Request Line"; return false;
     }
 
-    if(mCur.version != "HTTP/1.1" && mCur.version != "HTTP/1.0"){
+    mCur.method = ParseMethod(mCur.methodText);
+    mCur.version = ParseVersion(mCur.versionText);
+
+    if(mCur.method == HttpMethod::Unknown){
+        if(err) *err = "Unsupported HTTP method"; return false;
+    }
+
+    if(mCur.version == HttpVersion::Unknown){
         if(err) *err = "Unsupported HTTP version"; return false;
     }
 
@@ -108,6 +115,25 @@ bool HttpParser::ParseHeaderLine(const std::string& line, std::string* err){
 
     mCur.headers[k] = v;
     return true;
+}
+
+HttpMethod HttpParser::ParseMethod(std::string_view m){
+    if(m == "GET")        return HttpMethod::Get;
+    if(m == "POST")       return HttpMethod::Post;
+    if(m == "PUT")        return HttpMethod::Put;
+    if(m == "DELETE")     return HttpMethod::Delete;
+    if(m == "PATCH")      return HttpMethod::Patch;
+    if(m == "HEAD")       return HttpMethod::Head;
+    if(m == "OPTIONS")    return HttpMethod::Options;
+
+    return HttpMethod::Unknown;
+}
+
+HttpVersion HttpParser::ParseVersion(std::string_view v){
+    if(v == "HTTP/1.1") return HttpVersion::Http11;
+    if(v == "HTTP/1.0") return HttpVersion::Http10;
+
+    return HttpVersion::Unknown;
 }
 
 HttpParser::Result HttpParser::TryParse(RecvBuffer& rb, HttpRequest& rq, std::string* outErr){

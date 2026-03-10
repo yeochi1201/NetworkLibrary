@@ -11,6 +11,7 @@
 #include "HttpEnumClass.h"
 
 class HttpRequest{
+    friend class HttpParser;
 public:
     void Clear();
 
