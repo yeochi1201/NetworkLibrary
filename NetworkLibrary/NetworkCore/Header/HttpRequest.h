@@ -31,8 +31,9 @@ private:
     HttpVersion version = HttpVersion::Unknown;
     std::string versionText;
 
-    std::unordered_map<std::string, std::string> headers;
-    std::unordered_map<std::string, std::string> queryParams;
+    HeaderMap headers;
+    QueryMap queryParams;
+    
     std::vector<std::uint8_t> body;
 
     bool keepAlive = true;

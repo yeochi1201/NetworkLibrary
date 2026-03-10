@@ -1,6 +1,5 @@
 #include "HttpRequest.h"
 
-#include <algorithm>
 #include <cctype>
 
 void HttpRequest::Clear(){

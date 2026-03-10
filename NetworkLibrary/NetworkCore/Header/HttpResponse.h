@@ -4,8 +4,9 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
-#include <unordered_map>
 #include <vector>
+
+#include "HttpTypes.h"
 
 class HttpParser;
 class HttpResponse{
@@ -25,7 +26,10 @@ public:
 private:
     int status = 200;
     std::string reason = "OK";
-    std::unordered_map<std::string, std::string> headers;
+    
+    HeaderMap headers;
+    QueryMap queryParams;
+
     std::vector<std::uint8_t> body;
 };
 
