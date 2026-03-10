@@ -10,6 +10,8 @@
 
 #include "HttpEnumClass.h"
 
+class HttpParser;
+
 class HttpRequest{
     friend class HttpParser;
 public:
