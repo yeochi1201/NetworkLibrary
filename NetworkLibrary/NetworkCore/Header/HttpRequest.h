@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "HttpEnumClass.h"
+#include "HttpTypes.h"
 
 class HttpParser;
 
