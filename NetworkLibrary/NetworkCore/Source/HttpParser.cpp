@@ -99,6 +99,8 @@ bool HttpParser::ParseRequestLine(const std::string& line, std::string* err){
         if(err) *err = "Unsupported HTTP version"; return false;
     }
 
+    ParseTarget(mCur);
+
     return true;
 }
 
@@ -137,6 +139,52 @@ HttpVersion HttpParser::ParseVersion(std::string_view v){
     if(v == "HTTP/1.0") return HttpVersion::Http10;
 
     return HttpVersion::Unknown;
+}
+
+void HttpParser::ParseTarget(HttpRequest& req){
+    req.path.clear();
+    req.queryString.clear();
+    req.queryParams.clear();
+
+    std::string_view targetView(req.target);
+    std::size_t qpos = targetView.find('?');
+    if(qpos == std::string_view::npos){
+        req.path = req.target;
+        return;
+    }
+
+    req.path = std::string(targetView.substr(0, qpos));
+    req.queryString = std::string(targetView.substr(qpos + 1));
+
+    ParseQueryString(req.queryString, req.queryParams);
+}
+
+void HttpParser::ParseQueryString(std::string_view query, QueryMap& out){
+    out.clear();
+
+    while(!query.empty()){
+        std::size_t amp = query.find('&');
+        std::string_view token;
+
+        if(amp == std::string_view::npos){
+            token = query;
+            query = {};
+        } else {
+            token = query.substr(0, amp);
+            query.remove_prefix(amp + 1);
+        }
+
+        if(token.empty()) continue;
+
+        std::string_view key;
+        std::string_view value;
+
+        if(SplitOnce(token, '=', key, value)){
+            out[std::string(key)] = std::string(value);
+        } else {
+            out[std::string(token)] = "";
+        }
+    }
 }
 
 HttpParser::Result HttpParser::TryParse(RecvBuffer& rb, HttpRequest& rq, std::string* outErr){
