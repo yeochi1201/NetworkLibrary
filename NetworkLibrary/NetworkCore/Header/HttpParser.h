@@ -10,22 +10,10 @@
 #include <optional>
 
 #include "HttpRequest.h"
+#include "HttpResponse.h"
 #include "ListenerSocket.h"
 
 class RecvBuffer;
-
-struct HttpResponse{
-    int status = 200;
-    std::string reason = "OK";
-    std::unordered_map<std::string, std::string> headers;
-    std::vector<std::uint8_t> body;
-
-    void SetTextBody(std::string_view s){
-        body.assign(s.begin(), s.end());
-        headers["Content-Type"] = "text/plain; charset=utf-8";
-    }
-};
-std::vector<std::uint8_t> BuildHttpResponseBytes(const HttpResponse& resp, bool keepAlive);
 
 class HttpParser{
 public:
