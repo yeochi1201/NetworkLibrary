@@ -1,5 +1,7 @@
 #include "HttpParser.h"
 #include "RecvBuffer.h"
+#include "HttpHeaderUtils.h"
+
 #include <cctype>
 #include <cstddef>
 #include <cstring>

@@ -1,4 +1,5 @@
 #include "HttpResponse.h"
+#include "HttpHeaderUtils.h"
 
 #include <cctype>
 #include <utility>
@@ -45,12 +46,12 @@ void HttpResponse::SetBody(std::vector<std::uint8_t>&& bytes)
 
 void HttpResponse::SetHeader(std::string key, std::string value)
 {
-    headers[NormalizeHeaderKey(key)] = std::move(value);
+    return ::SetHeader(headers, key, std::move(value));
 }
 
 bool HttpResponse::HasHeader(std::string_view key) const
 {
-    return headers.find(NormalizeHeaderKey(key)) != headers.end();
+    return ::HasHeader(headers, key);
 }
 
 std::vector<std::uint8_t> HttpResponse::Serialize(bool keepAlive) const{
