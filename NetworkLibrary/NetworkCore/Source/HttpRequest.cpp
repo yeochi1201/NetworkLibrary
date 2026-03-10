@@ -33,3 +33,15 @@ std::string_view HttpRequest::BodyText() const{
     if(body.empty()) return {};
     return std::string_view(reinterpret_cast<const char*>(body.data()), body.size());
 }
+
+const std::vector<std::uint8_t>& HttpRequest::Body() const{
+    return body;
+}
+
+std::size_t HttpRequest::BodySize() const{
+    return body.size();
+}
+
+bool HttpRequest::EmptyBody() const{
+    return body.empty();
+}
