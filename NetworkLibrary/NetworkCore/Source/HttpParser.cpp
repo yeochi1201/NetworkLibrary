@@ -154,17 +154,29 @@ HttpParser::Result HttpParser::TryParse(RecvBuffer& rb, HttpRequest& rq, std::st
         if(mState == State::Http_Headers){
             std::string line;
             if(!PopLine(line)) return Result::Http_NeedMore;
+
             if(line.empty()){
                 mContentLength = 0;
+
                 auto it = mCur.headers.find("content-length");
                 if(it != mCur.headers.end()){
                     char* end = nullptr;
                     long v = std::strtol(it->second.c_str(), &end, 10);
+
                     if(end == it->second.c_str() || v < 0){
                         if(outErr) *outErr = "Invalid Content-Length";
                         return Result::Http_Error;
                     }
+
                     mContentLength = (std::size_t)v;
+                }
+
+                auto connIt = mCur.headers.find("connection");
+                if(connIt != mCur.headers.end()){
+                    std::string conn = ToLower(connIt->second);
+                    mCur.keepAlive = (conn != "close");
+                }else{
+                    mCur.keepAlive = (mCur.version == HttpVersion::Http11);
                 }
 
                 if(mContentLength == 0){
@@ -177,6 +189,9 @@ HttpParser::Result HttpParser::TryParse(RecvBuffer& rb, HttpRequest& rq, std::st
                 mState = State::Http_Body;
                 continue;
             }
+
+            if(!ParseHeaderLine(line, outErr)) return Result::Http_Error;
+            continue;
         }
 
         if(mState == State::Http_Body){
