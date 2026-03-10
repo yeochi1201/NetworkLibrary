@@ -1,5 +1,7 @@
 #include "HttpParser.h"
 #include "RecvBuffer.h"
+#include "HttpHeaderUtils.h"
+
 #include <cctype>
 #include <cstddef>
 #include <cstring>
@@ -97,6 +99,8 @@ bool HttpParser::ParseRequestLine(const std::string& line, std::string* err){
         if(err) *err = "Unsupported HTTP version"; return false;
     }
 
+    ParseTarget(mCur);
+
     return true;
 }
 
@@ -106,14 +110,15 @@ bool HttpParser::ParseHeaderLine(const std::string& line, std::string* err){
         if(err) *err = "Bad Header Line"; return false;
     }
 
-    auto k = ToLower(Trim(left));
-    auto v = Trim(right);
-    
-    if(k.empty()){
-        if(err) *err = "Bad Header Key"; return false;
+    auto key = NormalizeHeaderKey(Trim(left));
+    auto value = Trim(right);
+
+    if(key.empty()){
+        if(err) *err = "Bad Header Key";
+        return false;
     }
 
-    mCur.headers[k] = v;
+    mCur.headers[key] = value;
     return true;
 }
 
@@ -136,6 +141,52 @@ HttpVersion HttpParser::ParseVersion(std::string_view v){
     return HttpVersion::Unknown;
 }
 
+void HttpParser::ParseTarget(HttpRequest& req){
+    req.path.clear();
+    req.queryString.clear();
+    req.queryParams.clear();
+
+    std::string_view targetView(req.target);
+    std::size_t qpos = targetView.find('?');
+    if(qpos == std::string_view::npos){
+        req.path = req.target;
+        return;
+    }
+
+    req.path = std::string(targetView.substr(0, qpos));
+    req.queryString = std::string(targetView.substr(qpos + 1));
+
+    ParseQueryString(req.queryString, req.queryParams);
+}
+
+void HttpParser::ParseQueryString(std::string_view query, QueryMap& out){
+    out.clear();
+
+    while(!query.empty()){
+        std::size_t amp = query.find('&');
+        std::string_view token;
+
+        if(amp == std::string_view::npos){
+            token = query;
+            query = {};
+        } else {
+            token = query.substr(0, amp);
+            query.remove_prefix(amp + 1);
+        }
+
+        if(token.empty()) continue;
+
+        std::string_view key;
+        std::string_view value;
+
+        if(SplitOnce(token, '=', key, value)){
+            out[std::string(key)] = std::string(value);
+        } else {
+            out[std::string(token)] = "";
+        }
+    }
+}
+
 HttpParser::Result HttpParser::TryParse(RecvBuffer& rb, HttpRequest& rq, std::string* outErr){
     //Pulling
     if(rb.WriteSpace() > 0) (void)PullFromRecvBuffer(rb);
@@ -144,7 +195,7 @@ HttpParser::Result HttpParser::TryParse(RecvBuffer& rb, HttpRequest& rq, std::st
         if(mState == State::Http_RequestLine){
             std::string line;
             if(!PopLine(line)) return Result::Http_NeedMore;
-            if(line.empty()) return Result::Http_NeedMore;
+            if(line.empty()) continue;
             if(!ParseRequestLine(line, outErr)) return Result::Http_Error;
 
             mState = State::Http_Headers;
@@ -163,12 +214,12 @@ HttpParser::Result HttpParser::TryParse(RecvBuffer& rb, HttpRequest& rq, std::st
                     char* end = nullptr;
                     long v = std::strtol(it->second.c_str(), &end, 10);
 
-                    if(end == it->second.c_str() || v < 0){
+                    if(end == it->second.c_str() || *end != '\0' || v < 0){
                         if(outErr) *outErr = "Invalid Content-Length";
                         return Result::Http_Error;
                     }
 
-                    mContentLength = (std::size_t)v;
+                    mContentLength = static_cast<std::size_t>(v);
                 }
 
                 auto connIt = mCur.headers.find("connection");

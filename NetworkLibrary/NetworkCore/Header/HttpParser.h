@@ -2,15 +2,12 @@
 #define HTTP_PARSER
 
 
-#include <cstdint>
 #include <string>
 #include <string_view>
-#include <unordered_map>
-#include <vector>
-#include <optional>
 
 #include "HttpRequest.h"
 #include "HttpResponse.h"
+#include "HttpTypes.h"
 #include "ListenerSocket.h"
 
 class RecvBuffer;
@@ -43,7 +40,11 @@ private:
     bool ParseRequestLine(const std::string& line, std::string* err);
     bool ParseHeaderLine(const std::string& line, std::string* err);
     
+
     HttpMethod ParseMethod(std::string_view m);
     HttpVersion ParseVersion(std::string_view v);
+    void ParseTarget(HttpRequest& req);
+    void ParseQueryString(std::string_view query, QueryMap& out);
+
 };
 #endif

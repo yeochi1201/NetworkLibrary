@@ -17,6 +17,11 @@ add_library(NetworkCore STATIC
     Source/MessageFramer.cpp
     Header/HttpParser.h
     Source/HttpParser.cpp
+    Header/HttpRequest.h
+    Source/HttpRequest.cpp
+    Header/HttpResponse.h
+    Source/HttpResponse.cpp
+    Header/HttpEnumClass.h
 )
 
 target_include_directories(NetworkCore

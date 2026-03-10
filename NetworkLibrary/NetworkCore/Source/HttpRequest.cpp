@@ -1,6 +1,6 @@
 #include "HttpRequest.h"
+#include "HttpHeaderUtils.h"
 
-#include <algorithm>
 #include <cctype>
 
 void HttpRequest::Clear(){
@@ -22,21 +22,11 @@ void HttpRequest::Clear(){
 }
 
 std::optional<std::string_view> HttpRequest::Header(std::string_view key) const {
-    std::string normalized;
-    normalized.reserve(key.size());
-
-    for(char c : key){
-        normalized.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
-    }
-
-    auto it = headers.find(normalized);
-    if(it == headers.end()) return std::nullopt;
-
-    return std::string_view(it->second);
+    return ::FindHeader(headers, key);
 }
 
 bool HttpRequest::HasHeader(std::string_view key) const {
-    return Header(key).has_value();
+    return ::HasHeader(headers, key);
 }
 
 std::string_view HttpRequest::BodyText() const{
